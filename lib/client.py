@@ -523,6 +523,10 @@ class Client(object):
             if nTriedRecently >= self.guardsThreshold:
                 return
 
+        # check the threshold before chosing a guard
+        if not self.checkFailoverThreshold():
+            return
+
         possible = self.getFullList()
         unused = [n for n in possible if not
                   self.nodeIsInGuardList(n, self.currentPrimaryGuards)]
@@ -531,9 +535,6 @@ class Client(object):
             node = unused[0]
         else:
             node = random.choice(unused)
-
-        if not self.checkFailoverThreshold():
-            return None
 
         self.addGuard(node)
 

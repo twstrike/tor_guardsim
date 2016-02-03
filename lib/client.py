@@ -580,7 +580,7 @@ class Client(object):
         if self.networkAppearsDown:
             self.networkAppearsDown = False
 
-        self.getGuard(self.inADystopia)
+        self.getGuard()
 
     def maybeCheckNetwork(self):
         """In the actual implementation, this functionality should look (in some
@@ -610,7 +610,7 @@ class Client(object):
                       % (self._state, guard))
                 guard.markForRetry()
 
-    def getGuard(self, dystopic):
+    def getGuard(self):
         """We're about to build a circuit: return a guard to try."""
 
         if self.conformsToProp259:
@@ -658,7 +658,7 @@ class Client(object):
             if len(possible) == 0:
                 return None
             newnode = random.choice(possible)
-            if self.addGuard(newnode, dystopic) is not None:
+            if self.addGuard(newnode) is not None:
                 newguard = lst[-1]
                 assert newguard.node == newnode
                 return newguard
@@ -709,7 +709,7 @@ class Client(object):
             self._incrementCircuitFailureCount()
             return False
 
-        g = self.getGuard(self.inADystopia)
+        g = self.getGuard()
 
         if not g:
             return False

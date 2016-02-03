@@ -677,8 +677,7 @@ class Client(object):
             if not guards:
                 if self._primaryGuardsRetryTimer.isReady():
                     self._primaryGuardsRetryTimer.fire()
-
-            guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
+                    guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
 
             # 4. If there were no available entry guards, the algorithm adds a new entry
             # guard and returns it.  [XXX detail what "adding" means]

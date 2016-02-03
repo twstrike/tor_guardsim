@@ -511,6 +511,8 @@ class Client(object):
         guard?  If we're picking a random guard, then that means the primary
         ones probably weren't working… so is this a secondary one?
         """
+        assert self.conformsToProp259
+
         # 1. [prop241] and [prop259]: Check that we have not already attempted
         # to add too many guards.  If we've added too many guards too recently,
         # then boo-hoo-hoo no tor for you.
@@ -529,14 +531,14 @@ class Client(object):
             node = unused[0]
         else:
             node = random.choice(unused)
+
+        if not self.checkFailoverThreshold():
+            return None
+
         self.addGuard(node)
 
     def addGuard(self, node):
         """Try to add a single Node 'node' to the current primary guard list."""
-        if self.conformsToProp259:
-            if not self.checkFailoverThreshold():
-                return None
-
         guard = Guard(node)
         print(("Picked new (%stopic) guard: %s" %
                ("dys" if node.seemsDystopic() else "u", guard)))

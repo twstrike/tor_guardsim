@@ -531,8 +531,8 @@ class Client(object):
             node = random.choice(unused)
         self.addGuard(node)
 
-    def addGuard(self, node, dystopic=False):
-        """Try to add a single Node 'node' to the 'dystopic' guard list."""
+    def addGuard(self, node):
+        """Try to add a single Node 'node' to the current primary guard list."""
         if self.conformsToProp259:
             if not self.checkFailoverThreshold():
                 return None

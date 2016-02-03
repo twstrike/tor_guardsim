@@ -626,7 +626,7 @@ class Client(object):
         # attempt happens only once every 20 mins to avoid infinite loops.
         #
         # (This step happens in automatically, because
-        # Client.retryPrimaryGuards() is called every twenty minutes on a
+        # Client.retryPrimaryGuards() is called every sixty minutes on a
         # timer. )
 
         # 3. Take the list of all available and fitting entry guards and return

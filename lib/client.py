@@ -727,5 +727,8 @@ class Client(object):
         self._CIRCUIT_FAILURES = 0
 
     def averageGuardBandwidth(self, *arg, **kwargs):
+        if not self._GUARD_BANDWIDTHS:
+            return 0
+
         return (float(sum(self._GUARD_BANDWIDTHS)) /
                 float(len(self._GUARD_BANDWIDTHS)))

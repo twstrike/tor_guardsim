@@ -16,6 +16,8 @@ def trivialSimulation(args):
     net = tornet.Network(num)
 
     # Decorate the network.
+    if args.network_down:
+        net = tornet.DownNetwork(net)
     if args.fascist_firewall:
         net = tornet.FascistNetwork(net)
     if args.flaky_network:

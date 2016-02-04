@@ -49,6 +49,9 @@ def makeOptionsParser():
         help=("Simulate a network that does a DoS attack on a client's "
               "non-evil guard nodes with some probability after each "
               "connection."))
+    net_group.add_argument(
+        "-d", "--network-down", action="store_true",
+        help=("Simulate a network that is completely down."))
 
     # Other miscellaneous options
     parser.add_argument(

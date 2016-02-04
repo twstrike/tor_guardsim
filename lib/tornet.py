@@ -259,3 +259,12 @@ class FlakyNetwork(_NetworkDecorator):
         if random.random() >= self._reliability:
             return False
         return self._network.probe_node_is_up(node)
+
+class DownNetwork(_NetworkDecorator):
+    """A network where no connections succeed, regardless of whether
+       the node is up or down. It assumes we can get a consensus, however."""
+    def __init__(self, network):
+        super(DownNetwork, self).__init__(network)
+
+    def probe_node_is_up(self, node):
+        return False

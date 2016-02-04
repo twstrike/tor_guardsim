@@ -60,4 +60,10 @@ def makeOptionsParser():
               "nodes with higher bandwidth capacity.  This option causes random "
               "nodes to be chosen"))
 
+    parser.add_argument(
+        "-d", "--disjoint-sets", action="store_true",
+        help=("When building the set of utopic/dystopic guards, the default is "
+              "to have an intersecting set. This option causes them to be "
+              "disjoint sets"))
+
     return parser.parse_args()

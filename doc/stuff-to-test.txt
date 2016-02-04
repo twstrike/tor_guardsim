@@ -4,7 +4,7 @@ Network scenarios (normal):
 
    * Normal network; all hosts up with P=x%:
        `./lib/main.py --prop[241|259]`
-   * TODO: Network is down and looks down.
+   * TODO: Network is down and looks down. [Ola working on]
    * TODO: Network seems up but is down.
    * FascistFirewall; only 443 and 80 reachable, P=x%:
        `./lib/main.py -F --prop[241|259]`

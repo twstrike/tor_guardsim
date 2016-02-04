@@ -482,10 +482,10 @@ class Client(object):
 
             if node.seemsDystopic():
                 self._DYSTOPIC_GUARDS.append(node)
-                if self._p.DISJOINT_SETS:
-                    continue
-
-            self._UTOPIC_GUARDS.append(node)
+                if not self._p.DISJOINT_SETS:
+                    self._UTOPIC_GUARDS.append(node)
+            else:
+                self._UTOPIC_GUARDS.append(node)
 
         # Sort the lists from highest bandwidth to lowest.
         self._UTOPIC_GUARDS.sort(cmp=compareNodeBandwidth, reverse=True)

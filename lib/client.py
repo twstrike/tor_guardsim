@@ -77,7 +77,8 @@ class ClientParams(object):
                  RETRY_MULT=2,
                  PROP241=False,
                  PROP259=False,
-                 PRIORITIZE_BANDWIDTH=True):
+                 PRIORITIZE_BANDWIDTH=True,
+                 DISJOINT_SETS=False):
 
         # prop241: if we have seen this many guards...
         self.TOO_MANY_GUARDS = TOO_MANY_GUARDS
@@ -121,6 +122,8 @@ class ClientParams(object):
         # choosing a new guard.
         self.PRIORITIZE_BANDWIDTH = PRIORITIZE_BANDWIDTH
 
+        # If True, UTOPIC_GUARDS and DISTOPIC_GUARDS are disjoint
+        self.DISJOINT_SETS = DISJOINT_SETS
 
 class Guard(object):
     """Represents what a client knows about a guard."""
@@ -272,20 +275,23 @@ class Client(object):
         return bool(self._p.PROP259)
 
     @property
-    def guardsThresholdDystopic(self):
-        running = len(self._DYSTOPIC_GUARDS) + len(self._UTOPIC_GUARDS)
+    def runningGuards(self):
+        if self._p.DISJOINT_SETS:
+            return len(self._UTOPIC_GUARDS) + len(self._DYSTOPIC_GUARDS)
 
+        return len(self._UTOPIC_GUARDS)
+
+    @property
+    def guardsThresholdDystopic(self):
         if self.conformsToProp259:
-            return floor(running * self._p.DYSTOPIC_GUARDS_THRESHOLD)
+            return floor(self.runningGuards * self._p.DYSTOPIC_GUARDS_THRESHOLD)
         elif self.conformsToProp241:
             return self._p.DYSTOPIC_GUARDS_THRESHOLD
 
     @property
     def guardsThresholdUtopic(self):
-        running = len(self._DYSTOPIC_GUARDS) + len(self._UTOPIC_GUARDS)
-
         if self.conformsToProp259:
-            return floor(running * self._p.UTOPIC_GUARDS_THRESHOLD)
+            return floor(self.runningGuards * self._p.UTOPIC_GUARDS_THRESHOLD)
         elif self.conformsToProp241:
             return self._p.DYSTOPIC_GUARDS_THRESHOLD
 
@@ -476,13 +482,13 @@ class Client(object):
         # We get the latest consensus here.
         for node in self._net.new_consensus():
             self._ALL_GUARD_NODE_IDS.add(node.getID())
+
             if node.seemsDystopic():
                 self._DYSTOPIC_GUARDS.append(node)
-            else:
-                # XXXX Having this be 'else' means that FirewallPorts
-                # XXXX has affect even when FascistFirewall is disabled.
-                # XXXX Interesting!  And maybe bad!
-                self._UTOPIC_GUARDS.append(node)
+                if self._p.DISJOINT_SETS:
+                    continue
+
+            self._UTOPIC_GUARDS.append(node)
 
         # Sort the lists from highest bandwidth to lowest.
         self._UTOPIC_GUARDS.sort(cmp=compareNodeBandwidth, reverse=True)

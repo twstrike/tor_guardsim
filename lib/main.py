@@ -28,7 +28,8 @@ def trivialSimulation(args):
     params = client.ClientParams(
         PROP241=args.prop241,
         PROP259=args.prop259,
-        PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth)
+        PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth,
+        DISJOINT_SETS=args.disjoint_sets)
     c = client.Client(net, params)
 
     ok = 0

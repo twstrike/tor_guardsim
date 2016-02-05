@@ -177,11 +177,14 @@ class Network(object):
                 nkilled += 1
 
         # add nAdd new nodes.
+        num_nodes = len(self._wholenet)
         for n in xrange(self._total, self._total+nAdd):
             node = Node("node%d"%n,
                         port=_randport(self._pfascistfriendly),
                         evil=random.random() < self._pevil)
             self._total += 1
+            self._wholenet.append(node)
+        self._wholenet = random.sample(self._wholenet, num_nodes)
 
     def updateRunning(self):
         """Enough time has passed for some nodes to go down and some to come

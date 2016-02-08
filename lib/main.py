@@ -30,7 +30,8 @@ def trivialSimulation(args):
     params = client.ClientParams(
         PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth,
         DISJOINT_SETS=args.disjoint_sets)
-    c = client.Client(net, params)
+    stats = client.Stats()
+    c = client.Client(net, stats, params)
 
     ok = 0
     bad = 0
@@ -60,7 +61,7 @@ def trivialSimulation(args):
     print("Successful client circuits (total): %d (%d)" % (ok, (ok + bad)))
     print("Percentage of successful circuits:  %f%%"
           % ((ok / float(ok + bad)) * 100.0))
-    print("Average guard bandwidth capacity:   %d KB/s" % c.averageGuardBandwidth())
+    print("Average guard bandwidth capacity:   %d KB/s" % stats.averageGuardBandwidth())
 
 if __name__ == '__main__':
     args = options.makeOptionsParser()

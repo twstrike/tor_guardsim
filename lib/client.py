@@ -194,11 +194,38 @@ class Guard(object):
         """
         return self._addedAt + nSec >= simtime.now()
 
+class Stats(object):
+    """Contains information about the stats of several runs over potentially
+    different clients."""
+
+    def __init__(self):
+        # Statistics keeping variables:
+        self._GUARD_BANDWIDTHS = []
+        self._CIRCUIT_FAILURES_TOTAL = 0
+        self._CIRCUIT_FAILURES = 0
+
+    def incrementCircuitFailureCount(self):
+        self._CIRCUIT_FAILURES += 1
+
+    def resetCircuitFailureCount(self):
+        self._CIRCUIT_FAILURES_TOTAL += self._CIRCUIT_FAILURES
+        self._CIRCUIT_FAILURES = 0
+
+    def averageGuardBandwidth(self):
+        if not self._GUARD_BANDWIDTHS:
+            return 0
+
+        return (float(sum(self._GUARD_BANDWIDTHS)) /
+                float(len(self._GUARD_BANDWIDTHS)))
+
+    def addBandwidth(self, bw):
+        self._GUARD_BANDWIDTHS.append(bw)
+
 
 class Client(object):
     """A stateful client implementation of the guard selection algorithm."""
 
-    def __init__(self, network, parameters):
+    def __init__(self, network, stats, parameters):
 
         # a torsim.Network object.
         self._net = network
@@ -240,10 +267,7 @@ class Client(object):
 
         self.updateGuardLists()
 
-        # Statistics keeping variables:
-        self._GUARD_BANDWIDTHS = []
-        self._CIRCUIT_FAILURES_TOTAL = 0
-        self._CIRCUIT_FAILURES = 0
+        self._stats = stats
 
     @property
     def _state(self):
@@ -357,7 +381,7 @@ class Client(object):
             print(("The network came up... %d circuits failed in the meantime "
                    "(%d total due to network failures).") %
                   (self._CIRCUIT_FAILURES, self._CIRCUIT_FAILURES_TOTAL))
-            self._resetCircuitFailureCount()
+            self._stats.resetCircuitFailureCount()
             self._networkDownRetryTimer.pause()
 
         self._networkAppearsDown = bool(isDown)
@@ -628,7 +652,7 @@ class Client(object):
         self.checkFailoverThreshold()
 
         if up:
-            self._GUARD_BANDWIDTHS.append(guard._node.bandwidth)
+            self._stats.addBandwidth(guard._node.bandwidth)
 
         return up
 
@@ -637,7 +661,7 @@ class Client(object):
         self.maybeCheckNetwork()
 
         if self.networkAppearsDown:
-            self._incrementCircuitFailureCount()
+            self._stats.incrementCircuitFailureCount()
             return False
 
         g = self.getGuard()
@@ -645,21 +669,3 @@ class Client(object):
         if not g:
             return False
         return self.connectToGuard(g)
-
-    ###########################
-    # Statistics keeping code #
-    ###########################
-
-    def _incrementCircuitFailureCount(self, *arg, **kwargs):
-        self._CIRCUIT_FAILURES += 1
-
-    def _resetCircuitFailureCount(self, *arg, **kwargs):
-        self._CIRCUIT_FAILURES_TOTAL += self._CIRCUIT_FAILURES
-        self._CIRCUIT_FAILURES = 0
-
-    def averageGuardBandwidth(self, *arg, **kwargs):
-        if not self._GUARD_BANDWIDTHS:
-            return 0
-
-        return (float(sum(self._GUARD_BANDWIDTHS)) /
-                float(len(self._GUARD_BANDWIDTHS)))

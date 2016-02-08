@@ -67,20 +67,14 @@ class ExponentialTimer(object):
 
 class ClientParams(object):
     """Represents the configuration parameters of the client algorithm, as given
-    in proposals 259 and 241.
+    in proposal 259.
     """
     def __init__(self,
-                 TOO_MANY_GUARDS=100, # XXX too high
                  TOO_RECENTLY=86400,
                  RETRY_DELAY=30,
                  RETRY_MULT=2,
-                 PROP241=False,
-                 PROP259=False,
                  PRIORITIZE_BANDWIDTH=True,
                  DISJOINT_SETS=False):
-
-        # prop241: if we have seen this many guards...
-        self.TOO_MANY_GUARDS = TOO_MANY_GUARDS
         # ...within this many simulated seconds, then "freak out".
         self.TOO_RECENTLY = TOO_RECENTLY
 
@@ -89,25 +83,16 @@ class ClientParams(object):
         # wait this much longer (factor) after the first time.
         self.RETRY_MULT = RETRY_MULT
 
-        # which proposal to follow when they diverge
-        self.PROP241 = PROP241
-        self.PROP259 = PROP259
-
-        # use absolute numbers, rather than percentages, when following prop241
-        if self.PROP241:
-            self.UTOPIC_GUARDS_THRESHOLD = 3
-            self.DYSTOPIC_GUARDS_THRESHOLD = 3
-        elif self.PROP259:
-            # prop259: percentage of guards to keep in a guard list (utopic)
-            self.UTOPIC_GUARDS_THRESHOLD = 0.005
-            # prop259: percentage of guards to keep in a guard list (dystopic)
-            self.DYSTOPIC_GUARDS_THRESHOLD = 0.005
-            # [prop259] Percentage of UTOPIC_GUARDS we try before also trying
-            # the DYSTOPIC_GUARDS.
-            self.UTOPIC_GUARDLIST_FAILOVER_THRESHOLD = 0.75
-            # [prop259] Percentage of DYSTOPIC_GUARDS we try before concluding
-            # that the network is down.
-            self.DYSTOPIC_GUARDLIST_FAILOVER_THRESHOLD = 1.00
+        # prop259: percentage of guards to keep in a guard list (utopic)
+        self.UTOPIC_GUARDS_THRESHOLD = 0.005
+        # prop259: percentage of guards to keep in a guard list (dystopic)
+        self.DYSTOPIC_GUARDS_THRESHOLD = 0.005
+        # [prop259] Percentage of UTOPIC_GUARDS we try before also trying
+        # the DYSTOPIC_GUARDS.
+        self.UTOPIC_GUARDLIST_FAILOVER_THRESHOLD = 0.75
+        # [prop259] Percentage of DYSTOPIC_GUARDS we try before concluding
+        # that the network is down.
+        self.DYSTOPIC_GUARDLIST_FAILOVER_THRESHOLD = 1.00
 
         # From asn's post and prop259.  This should be a consensus parameter.
         # It stores the number of guards in {U,DYS}TOPIC_GUARDLIST which we
@@ -266,14 +251,6 @@ class Client(object):
         return "utopic" if self.inAUtopia else "dystopic"
 
     @property
-    def conformsToProp241(self):
-        return bool(self._p.PROP241)
-
-    @property
-    def conformsToProp259(self):
-        return bool(self._p.PROP259)
-
-    @property
     def runningGuards(self):
         if self._p.DISJOINT_SETS:
             return len(self._UTOPIC_GUARDS) + len(self._DYSTOPIC_GUARDS)
@@ -282,26 +259,16 @@ class Client(object):
 
     @property
     def guardsThresholdDystopic(self):
-        if self.conformsToProp259:
-            return floor(self.runningGuards * self._p.DYSTOPIC_GUARDS_THRESHOLD)
-        elif self.conformsToProp241:
-            return self._p.DYSTOPIC_GUARDS_THRESHOLD
+        return floor(self.runningGuards * self._p.DYSTOPIC_GUARDS_THRESHOLD)
 
     @property
     def guardsThresholdUtopic(self):
-        if self.conformsToProp259:
-            return floor(self.runningGuards * self._p.UTOPIC_GUARDS_THRESHOLD)
-        elif self.conformsToProp241:
-            return self._p.DYSTOPIC_GUARDS_THRESHOLD
+        return floor(self.runningGuards * self._p.UTOPIC_GUARDS_THRESHOLD)
 
     @property
     def guardsThreshold(self):
         """Determine our ``{U,DYS}TOPIC_GUARDS_THRESHOLD``.
 
-        If this client :meth:`~Client.conformsToProp241`, then
-        ``{U,DYS}TOPIC_GUARDS_THRESHOLD`` is interpreted as an integer
-        specifying the maximum number of entry guards which will be attempted.
-        Otherwise, when the client :meth:`~Client.conformsToProp259`, then
         ``{U,DYS}TOPIC_GUARDS_THRESHOLD`` is interpreted as an float
         representing the percentage of the total running entry guards from the
         most recent consensus to which the client will attempt to connect, and
@@ -321,18 +288,12 @@ class Client(object):
     @property
     def canAddPrimaryDystopicGuard(self):
         """Returns True if we haven't hit guardsThresholdDystopic."""
-        if self.conformsToProp259:
-            if len(self.primaryDystopicGuards) >= self.guardsThresholdDystopic:
-                return False
-        return True
+        return len(self.primaryDystopicGuards) < self.guardsThresholdDystopic
 
     @property
     def canAddPrimaryUtopicGuard(self):
         """Returns True if we haven't hit guardsThresholdUtopic."""
-        if self.conformsToProp259:
-            if len(self.primaryUtopicGuards) >= self.guardsThresholdUtopic:
-                return False
-        return True
+        return len(self.primaryUtopicGuards) < self.guardsThresholdUtopic
 
     @property
     def canAddPrimaryGuard(self):
@@ -453,18 +414,17 @@ class Client(object):
              DYSTOPIC_GUARDLIST nodes are accessible, Alice should make a note
              to herself that she is possibly behind a fascist firewall.
         """
-        if self.conformsToProp259:
-            if not self.canAddPrimaryGuard:
-                if not self.hasAnyCurrentPrimaryGuardsUp:
-                    print("We already have %d %s guards and can't add more… " %
-                          (self.guardsThreshold, self._state))
+        if not self.canAddPrimaryGuard:
+            if not self.hasAnyCurrentPrimaryGuardsUp:
+                print("We already have %d %s guards and can't add more… " %
+                      (self.guardsThreshold, self._state))
 
-                if self.inAUtopia and not self.hasAnyPrimaryUtopicGuardsUp:
-                    self.inADystopia = True
-                elif self.inADystopia and not self.hasAnyPrimaryDystopicGuardsUp:
-                    self.networkAppearsDown = True
+            if self.inAUtopia and not self.hasAnyPrimaryUtopicGuardsUp:
+                self.inADystopia = True
+            elif self.inADystopia and not self.hasAnyPrimaryDystopicGuardsUp:
+                self.networkAppearsDown = True
 
-                return False
+            return False
         return True
 
     def updateGuardLists(self):
@@ -514,9 +474,8 @@ class Client(object):
         guard?  If we're picking a random guard, then that means the primary
         ones probably weren't working… so is this a secondary one?
         """
-        assert self.conformsToProp259
 
-        # 1. [prop241] and [prop259]: Check that we have not already attempted
+        # 1. [prop259]: Check that we have not already attempted
         # to add too many guards.  If we've added too many guards too recently,
         # then boo-hoo-hoo no tor for you.
         nTriedRecently = 0
@@ -586,7 +545,7 @@ class Client(object):
         if self.networkAppearsDown:
             self.networkAppearsDown = False
 
-        self.getGuard259()
+        self.getGuardImpl()
 
     def maybeCheckNetwork(self):
         """In the actual implementation, this functionality should look (in some
@@ -619,12 +578,11 @@ class Client(object):
     def getGuard(self):
         """We're about to build a circuit: return a guard to try."""
 
-        if self.conformsToProp259:
-            # 0. Determine if the local network is potentially accessible.
-            self.maybeCheckNetwork()
-            if self.networkAppearsDown:
-                print("The network is (still) down...")
-                return
+        # 0. Determine if the local network is potentially accessible.
+        self.maybeCheckNetwork()
+        if self.networkAppearsDown:
+            print("The network is (still) down...")
+            return
 
         # 2. [prop259]: If the PRIMARY_GUARDS on our list are marked offline,
         # the algorithm attempts to retry them, to ensure that they were not
@@ -637,49 +595,10 @@ class Client(object):
 
         # 3. Take the list of all available and fitting entry guards and return
         # the top one in the list.
-        if self.conformsToProp241:
-            return self.getGuard241()
+        return self.getGuardImpl()
 
-        # 3. Take the list of all available and fitting entry guards and return
-        # the top one in the list.
-        if self.conformsToProp259:
-            return self.getGuard259()
 
-    def getGuard241(self):
-        usable = [g for g in self.allPrimaryGuards if g.canTry()]
-        listed = [g for g in self.allPrimaryGuards if g.isListed()]
-
-        # See if we should retry or add more or use what we have.
-        # Here we consider the number of currently-guardy guards.
-
-        # We can't add any more and we don't have any to try.
-        if not usable and len(listed) >= self.NUM_PRIMARY_GUARDS:
-            return None
-
-        if usable:
-            return usable[0] # Just use the first one that isn't down.
-
-        # This is the underlying list that we modify, AND the list
-        # we look at.
-        # XXXX are these supposed to be different lists?  Are we
-        # XXXX also supposed to consider non-dystopian guards
-        # XXXX when we think we're not in a dystopia?
-        lst = self.currentPrimaryGuards
-
-        # We can add another one.
-        full = self.getFullList()
-        possible = [ n for n in full if not self.nodeIsInGuardList(n, lst) ]
-        if len(possible) == 0:
-            return None
-        newnode = random.choice(possible)
-        if self.addGuard(newnode) is not None:
-            newguard = lst[-1]
-            assert newguard.node == newnode
-            return newguard
-        else:
-            return None
-
-    def getGuard259(self):
+    def getGuardImpl(self):
         #XXXX Need an easy way to say that the UTOPIC_GUARDS includes
         # routers advertised on 80/443.
         guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)

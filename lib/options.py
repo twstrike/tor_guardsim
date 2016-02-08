@@ -16,13 +16,6 @@ def makeOptionsParser():
     """
     parser = argparse.ArgumentParser()
 
-    # Which spec should we follow?
-    prop_group = parser.add_mutually_exclusive_group(required=True)
-    prop_group.add_argument("--prop241", action="store_true",
-                            help="Where the proposals diverge, follow prop#241.")
-    prop_group.add_argument("--prop259", action="store_true",
-                            help="Where the proposals diverge, follow prop#251.")
-
     # How should we simulate the network?
     net_group = parser.add_argument_group(
         title="Network Simulation Options",

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -xe
+
+./plot 
+./plot -D
+./plot -r
+./plot -r -D
+
+./plot -F
+./plot -F -D
+./plot -F -r
+./plot -F -r -D

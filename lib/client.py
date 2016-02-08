@@ -638,6 +638,7 @@ class Client(object):
         # guard and returns it.  [XXX detail what "adding" means]
         if not guards:
             self.addNewGuard()
+            guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
 
         # Use the first guard that works.
         for guard in guards:

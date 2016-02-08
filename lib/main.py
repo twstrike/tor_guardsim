@@ -27,11 +27,18 @@ def trivialSimulation(args):
     if args.sniper_network:
         net = tornet.SniperNetwork(net)
 
+
     params = client.ClientParams(
         PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth,
         DISJOINT_SETS=args.disjoint_sets)
     stats = client.Stats()
     c = client.Client(net, stats, params)
+
+    sameclient = True
+    gc = lambda: c
+    if args.separate_clients:
+        sameclient = False
+        gc = lambda: client.Client(net, stats, params)
 
     ok = 0
     bad = 0
@@ -44,10 +51,12 @@ def trivialSimulation(args):
             # nodes went up and down
             net.updateRunning()
 
+            cc = gc()
+
             for attempts in xrange(6): # 20 sec each
 
                 # actually have the client act.
-                if c.buildCircuit():
+                if cc.buildCircuit():
                     ok += 1
                 else:
                     bad += 1
@@ -56,7 +65,8 @@ def trivialSimulation(args):
                 simtime.advanceTime(20)
 
         # new consensus
-        c.updateGuardLists()
+        if sameclient:
+            c.updateGuardLists()
 
     print("Successful client circuits (total): %d (%d)" % (ok, (ok + bad)))
     print("Percentage of successful circuits:  %f%%"

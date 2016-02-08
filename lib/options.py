@@ -59,4 +59,9 @@ def makeOptionsParser():
               "to have an intersecting set. This option causes them to be "
               "disjoint sets"))
 
+    parser.add_argument(
+        "-C", "--separate-clients", action="store_true",
+        help=("If this flag is set, we will simulate many clients, while the "
+              "default behavior is to simulate one client doing many circuits."))
+
     return parser.parse_args()

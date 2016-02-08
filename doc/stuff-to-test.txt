@@ -3,12 +3,13 @@ Network scenarios (normal):
 ---------------------------
 
    * Normal network; all hosts up with P=x%:
-       `./lib/main.py --prop[241|259]`
+       `./lib/main.py`
    * Network is down and looks down.
-   * TODO: Network seems up but is down.
+       `./lib/main.py -d`
    * FascistFirewall; only 443 and 80 reachable, P=x%:
-       `./lib/main.py -F --prop[241|259]`
-   * TODO: User moves among above networks over time.
+       `./lib/main.py -F`
+   * User moves among above networks over time.
+       `./lib/main.py -S`
 
 Guard behavior:
 ---------------
@@ -41,10 +42,10 @@ Network scenarios (hostile):
 ----------------------------
 
    * Targeted guard takedown attack: attacker hits guards one after another:
-       `./lib/main.py -s --prop[241|259]`
+       `./lib/main.py -s`
    * Network under broad attack: many guards are flaky
-       `./lib/main.py -f --prop[241|259]`
+       `./lib/main.py -f`
    * Filtering at gateway; non-hostile fractino of Tor guards is unavailable:
-       `./lib/main.py -e --prop[241|259]`
+       `./lib/main.py -e`
    * TODO: Filtering at guard: guard blocks connections when it does not control
      path (out of scope?)

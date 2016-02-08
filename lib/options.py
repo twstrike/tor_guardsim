@@ -45,6 +45,9 @@ def makeOptionsParser():
     net_group.add_argument(
         "-d", "--network-down", action="store_true",
         help=("Simulate a network that is completely down."))
+    net_group.add_argument(
+        "-S", "--switching-network", action="store_true",
+        help=("Simulate a network that periodically switches between types."))
 
     # Other miscellaneous options
     parser.add_argument(

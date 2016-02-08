@@ -26,7 +26,8 @@ def trivialSimulation(args):
         net = tornet.EvilFilteringNetwork(net)
     if args.sniper_network:
         net = tornet.SniperNetwork(net)
-
+    if args.switching_network:
+        net = tornet.SwitchingNetwork(net)
 
     params = client.ClientParams(
         PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth,

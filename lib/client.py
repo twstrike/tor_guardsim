@@ -221,6 +221,10 @@ class Stats(object):
     def addBandwidth(self, bw):
         self._GUARD_BANDWIDTHS.append(bw)
 
+    def reportCurrentStats(self):
+        print(("The network came up... %d circuits failed in the meantime "
+               "(%d total due to network failures).") %
+              (self._CIRCUIT_FAILURES, self._CIRCUIT_FAILURES_TOTAL))
 
 class Client(object):
     """A stateful client implementation of the guard selection algorithm."""
@@ -378,9 +382,7 @@ class Client(object):
         # If we're flipping the state from down to up, then pause the retry
         # timer:
         elif self._networkAppearsDown and not bool(isDown):
-            print(("The network came up... %d circuits failed in the meantime "
-                   "(%d total due to network failures).") %
-                  (self._CIRCUIT_FAILURES, self._CIRCUIT_FAILURES_TOTAL))
+            self._stats.reportCurrentStats()
             self._stats.resetCircuitFailureCount()
             self._networkDownRetryTimer.pause()
 

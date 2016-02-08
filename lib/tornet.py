@@ -271,3 +271,23 @@ class DownNetwork(_NetworkDecorator):
 
     def probe_node_is_up(self, node):
         return False
+
+class SwitchingNetwork(_NetworkDecorator):
+    """A network where the network randomly switches between all kinds noted above."""
+    def __init__(self, network):
+        super(SwitchingNetwork, self).__init__(network)
+        self._real_network = network
+
+    def _switch_networks(self):
+        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork, self._real_network]
+        newNet = random.choice(allNetworks)
+        if newNet == self._real_network:
+            print("Network switched to real network")
+            self._network = self._real_network
+        else:
+            print("Network switched to %s" % newNet.__name__)
+            self._network = newNet(self._real_network)
+
+    def do_churn(self):
+        self._switch_networks()
+        self._network.do_churn()

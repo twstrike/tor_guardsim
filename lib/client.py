@@ -644,15 +644,24 @@ class Client(object):
 
         # Use the first guard that works.
         for guard in guards:
-            if self.connectToGuard(guard):
+            if self.probeGuard(guard):
                 return guard
+
+    def probeGuard(self, guard):
+        """If it's up on the network, mark it up.
+           With each try, update the failover threashold
+           Return true on success, false on failure."""
+        up = self._net.probe_node_is_up(guard.node)
+        self.markGuard(guard, up)
+        self.checkFailoverThreshold()
+
+        return up
 
     def connectToGuard(self, guard):
         """Try to connect to 'guard' -- if it's up on the network, mark it up.
            Return true on success, false on failure."""
         up = self._net.probe_node_is_up(guard.node)
         self.markGuard(guard, up)
-        self.checkFailoverThreshold()
 
         if up:
             self._stats.addBandwidth(guard._node.bandwidth)

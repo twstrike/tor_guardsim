@@ -27,6 +27,10 @@ def makeOptionsParser():
               "argument is not given, then a random number of relays in "
               "[100, 10000] will be used."))
     net_group.add_argument(
+        "-R", "--node-reliability", type=float,
+        help=("The reliability of each node - each node will be up by this probability after each churn. "
+              "The default is 0.96."))
+    net_group.add_argument(
         "-F", "--fascist-firewall", action="store_true",
         help=("Simulate only a FascistFirewall network which only allows "
               "connections to ports 80 and 443."))

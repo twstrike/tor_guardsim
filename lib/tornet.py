@@ -36,7 +36,7 @@ class Node(object):
         self._evil = evil
 
         # How much of the time is this node running?
-        self._reliability = 0.999
+        self._reliability = reliability
 
         # True if this node is running
         self._up = True
@@ -130,7 +130,7 @@ class Network(object):
        node to be a guard.  This shouldn't affect the algorithm.
     """
     def __init__(self, num_nodes, pfascistfriendly=.3, pevil=0.5,
-                 avgnew=1.5, avgdel=0.5):
+                 avgnew=1.5, avgdel=0.5, nodereliability=0.96):
 
         """Create a new network with 'num_nodes' randomly generated nodes.
            Each node should be fascist-friendly with probability
@@ -141,11 +141,13 @@ class Network(object):
         """
         self._pfascistfriendly = pfascistfriendly
         self._pevil = pevil
+        self._nodereliability = nodereliability
 
         # a list of all the Nodes on the network, dead and alive.
         self._wholenet = [ Node("node%d"%n,
                                 port=_randport(pfascistfriendly),
-                                evil=random.random() < pevil)
+                                evil=random.random() < pevil,
+                                reliability=nodereliability)
                            for n in xrange(num_nodes) ]
         for node in self._wholenet:
             node.updateRunning()
@@ -181,7 +183,8 @@ class Network(object):
         for n in xrange(self._total, self._total+nAdd):
             node = Node("node%d"%n,
                         port=_randport(self._pfascistfriendly),
-                        evil=random.random() < self._pevil)
+                        evil=random.random() < self._pevil,
+                        reliability=self._nodereliability)
             self._total += 1
             self._wholenet.append(node)
         self._wholenet = random.sample(self._wholenet, num_nodes)

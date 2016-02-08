@@ -13,7 +13,8 @@ def trivialSimulation(args):
     num = 1000 if not args.total_relays else args.total_relays
     print("Number of nodes in simulated Tor network: %d" % num)
 
-    net = tornet.Network(num)
+    rel = 0.96 if not args.node_reliability else args.node_reliability
+    net = tornet.Network(num, nodereliability=rel)
 
     # Decorate the network.
     if args.network_down:

@@ -24,17 +24,16 @@ the normal churn cycle of the simulation:
 And this one needs a parameter added to the options parser in order to
 explicitly change it:
 
-   * TODO: Guard goes away and comes back a lot
+   * Guard goes away and comes back a lot
+       `./lib/main.py -R 0.8`
 
 User behavior:
 --------------
 
    * Regular
        - The default network assumes we're not using bridges.
-   * TODO: Bridge
-       - There is no simulation for using (or switching to) bridges yet.
-   * TODO: FascistFirewall set (by user).
-       - The default network assumes it's set to [443,80].
+   * FascistFirewall set (by user).
+       - The default network assumes it's set to [443,80]. [ola: I don't think this simulation adds anything at this point]
    * TODO: Restart tor (when not working? Repeatedly)
    * TODO: HUP tor (when not working? repeatedly?)
 
@@ -47,5 +46,3 @@ Network scenarios (hostile):
        `./lib/main.py -f`
    * Filtering at gateway; non-hostile fractino of Tor guards is unavailable:
        `./lib/main.py -e`
-   * TODO: Filtering at guard: guard blocks connections when it does not control
-     path (out of scope?)

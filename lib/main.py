@@ -6,6 +6,7 @@ from py3hax import *
 import tornet
 import simtime
 import client
+import original_client
 import options
 
 
@@ -34,13 +35,15 @@ def trivialSimulation(args):
         PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth,
         DISJOINT_SETS=args.disjoint_sets)
     stats = client.Stats()
-    c = client.Client(net, stats, params)
+
+    client_factory = original_client.Client if args.legacy else client.Client
+    c = client_factory(net, stats, params)
 
     sameclient = True
     gc = lambda: c
     if args.separate_clients:
         sameclient = False
-        gc = lambda: client.Client(net, stats, params)
+        gc = lambda: client_factory(net, stats, params)
 
     ok = 0
     bad = 0

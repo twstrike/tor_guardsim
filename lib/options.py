@@ -71,4 +71,9 @@ def makeOptionsParser():
         help=("If this flag is set, we will simulate many clients, while the "
               "default behavior is to simulate one client doing many circuits."))
 
+    parser.add_argument(
+        "-L", "--legacy", action="store_true",
+        help=("If this flag is set, we will simulate the Client behavior "
+              "before this proposal."))
+
     return parser.parse_args()

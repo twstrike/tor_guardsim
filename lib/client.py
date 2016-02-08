@@ -643,13 +643,14 @@ class Client(object):
             guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
 
         # Use the first guard that works.
+        
         for guard in guards:
             if self.probeGuard(guard):
                 return guard
-
+            
     def probeGuard(self, guard):
         """If it's up on the network, mark it up.
-           With each try, update the failover threashold
+           With each try, update the failover threshold
            Return true on success, false on failure."""
         up = self._net.probe_node_is_up(guard.node)
         self.markGuard(guard, up)

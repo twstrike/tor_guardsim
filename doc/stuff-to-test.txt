@@ -34,8 +34,10 @@ User behavior:
        - The default network assumes we're not using bridges.
    * FascistFirewall set (by user).
        - The default network assumes it's set to [443,80]. [ola: I don't think this simulation adds anything at this point]
-   * TODO: Restart tor (when not working? Repeatedly)
-   * TODO: HUP tor (when not working? repeatedly?)
+   * Restart tor (when not working? Repeatedly)
+       [ola: in the current simulation this doesn't really add anything]
+   * HUP tor (when not working? repeatedly?)
+       [ola: in the current simulation this doesn't really add anything]
 
 Network scenarios (hostile):
 ----------------------------

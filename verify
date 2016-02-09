@@ -2,12 +2,26 @@
 
 set -xe
 
+# legacy
+./plot -L
+./plot -L -r
+
+# 259
 ./plot 
 ./plot -D
 ./plot -r
 ./plot -r -D
 
+# Fascist network
+./plot -F -L
 ./plot -F
 ./plot -F -D
 ./plot -F -r
 ./plot -F -r -D
+
+# switch between networks
+./plot -S -L
+./plot -S
+./plot -S -D
+./plot -S -r
+./plot -S -r -D

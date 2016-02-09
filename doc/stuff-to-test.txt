@@ -48,3 +48,18 @@ Network scenarios (hostile):
        `./lib/main.py -f`
    * Filtering at gateway; non-hostile fractino of Tor guards is unavailable:
        `./lib/main.py -e`
+
+Metrics we are interested in:
+-----------------------------
+
+   * Success rate
+   * Total bandwidth
+
+   Reachability related:
+   * Time (or number of guards) till we manage to build first circuit
+   * Time till we manage to recover from flaky network
+    
+   Security related: 
+   * Number of guards we tried before succeeding first circuit
+   * Number of guards we exposed ourselves to after time t
+

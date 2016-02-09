@@ -17,6 +17,9 @@ class Client(object):
         # a ClientParams object
         self._p = parameters
 
+        # client statistics
+        self._stats = stats
+
         # all guards we know about. We consider all of them to be directory guards
         # because they play an important role in the original algo, but this
         # behavior could be controlled by (another) flag.
@@ -28,12 +31,9 @@ class Client(object):
         # guard list for this client, default is 3
         self._GUARD_LIST = []
 
+        # Bootstrap Tor
         self.updateGuardLists()
-
-        self._stats = stats
-
-    def have_enough_guards(self):
-        return len(self._GUARD_LIST) >= 3
+        self.pickEntryGuards(3)
 
     def updateGuardLists(self):
         """Called at start and when a new consensus should be made & received:
@@ -49,11 +49,9 @@ class Client(object):
             guard.markListed()
             self._ALL_GUARDS.append(guard)
 
-    def pickEntryGuards(self):
-        # TODO: filter nodes that are not a good fit (already used)?
-
+    def pickEntryGuards(self, numNeeded):
         # Add new guards until we have enough
-        while not self.have_enough_guards():
+        while not len(self._GUARD_LIST) >= numNeeded:
             self.choose_random_entryguard()
 
     def choose_random_entryguard(self):
@@ -73,15 +71,18 @@ class Client(object):
         return (liveEntryGuards, False)
 
     def getGuard(self):
-        if not self.have_enough_guards():
-            self.pickEntryGuards()
-
         # After bootstrap, Tor requires only 1 guard
-        liveEntryGuards, shouldChoose = self.populateLiveEntryGuards(1)
+        numNeeded = 1
+
+        # ensure we have something to populate from
+        self.pickEntryGuards(numNeeded) 
+
+        liveEntryGuards, shouldChoose = self.populateLiveEntryGuards(numNeeded)
 
         if shouldChoose:
             return random.choice(liveEntryGuards)
 
+        # XXX When are the guards in _GUARD_LIST gonna be revisited?
         # 2 is really arbitrary by Tor source code
         if len(liveEntryGuards) < 2:
             # Retry relaxing constraints (we dont have many, but this is how

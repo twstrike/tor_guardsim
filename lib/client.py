@@ -216,6 +216,17 @@ class Stats(object):
         self._CIRCUIT_FAILURES_TOTAL = 0
         self._CIRCUIT_FAILURES = 0
 
+        self._EXPOSED_TO_GUARDS = []
+        self._EXPOSURE_TO_GUARDS = {}
+
+    def addExposedTo(self, guard, when):
+        try:
+            self._EXPOSED_TO_GUARDS.index(guard)
+        except ValueError:
+            self._EXPOSED_TO_GUARDS.append(guard)
+
+        exp = self._EXPOSURE_TO_GUARDS[when] = len(self._EXPOSED_TO_GUARDS)
+
     def incrementCircuitFailureCount(self):
         self._CIRCUIT_FAILURES += 1
 
@@ -237,6 +248,17 @@ class Stats(object):
         print(("The network came up... %d circuits failed in the meantime "
                "(%d total due to network failures).") %
               (self._CIRCUIT_FAILURES, self._CIRCUIT_FAILURES_TOTAL))
+
+    def guardsExposureAfter(self, t):
+        keys = self._EXPOSURE_TO_GUARDS.keys()
+        keys.sort()
+
+        exposure = 0
+        for k in keys:
+            if k >= t: break
+            exposure += self._EXPOSURE_TO_GUARDS[k]
+
+        return exposure
 
 class Client(object):
     """A stateful client implementation of the guard selection algorithm."""
@@ -667,6 +689,8 @@ class Client(object):
         up = self._net.probe_node_is_up(guard.node)
         self.markGuard(guard, up)
         self.checkFailoverThreshold()
+
+        self._stats.addExposedTo(guard, simtime.now())
 
         return up
 

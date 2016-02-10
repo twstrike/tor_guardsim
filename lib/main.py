@@ -78,6 +78,12 @@ def trivialSimulation(args):
           % ((ok / float(ok + bad)) * 100.0))
     print("Average guard bandwidth capacity:   %d KB/s" % stats.averageGuardBandwidth())
 
+    print("Exposure to guard over time (1, 15, 30) hours:   %s, %s, %s"
+          % (stats.guardsExposureAfter(60*60),
+          stats.guardsExposureAfter(15*60*60),
+          stats.guardsExposureAfter(30*60*60))
+          )
+
 if __name__ == '__main__':
     args = options.makeOptionsParser()
     trivialSimulation(args)

@@ -143,6 +143,8 @@ class Client(object):
         up = self._net.probe_node_is_up(guard.node)
         self.markGuard(guard, up)
 
+        self._stats.addExposedTo(guard, simtime.now())
+
         return up
 
     def connectToGuard(self, guard):

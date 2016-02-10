@@ -47,6 +47,7 @@ def trivialSimulation(args):
 
     ok = 0
     bad = 0
+    numTriedGuards = 0
 
     for period in xrange(30): # one hour each
         for subperiod in xrange(30): # two minutes each
@@ -66,6 +67,10 @@ def trivialSimulation(args):
                 else:
                     bad += 1
 
+                # Our first success
+                if ok == 1:
+                    numTriedGuards = stats.guardsExposureAfter(simtime.now())
+
                 # time passed
                 simtime.advanceTime(20)
 
@@ -83,6 +88,9 @@ def trivialSimulation(args):
           stats.guardsExposureAfter(15*60*60),
           stats.guardsExposureAfter(30*60*60))
           )
+
+    print("Number of guards we tried before succeeding first circuit:   %d" % numTriedGuards)
+
 
 if __name__ == '__main__':
     args = options.makeOptionsParser()

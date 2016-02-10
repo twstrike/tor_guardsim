@@ -60,6 +60,6 @@ Metrics we are interested in:
    * Time till we manage to recover from flaky network
     
    Security related: 
-   * Number of guards we tried before succeeding first circuit
+   * Number of guards we tried before succeeding first circuit - OK
    * Number of guards we exposed ourselves to after time t - OK
 

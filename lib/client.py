@@ -131,6 +131,18 @@ class Guard(object):
         # True iff the node is listed as a guard in the most recent consensus
         self._listed = True
 
+        # Time when the guard went to a bad state
+        self._badSince = None
+
+        self._madeContact = None
+
+        # XXX should we have:
+        # - unreachable_since
+        # - last_attempted
+        # - bad_since
+        # - can_retry
+        # ???
+
     def __str__(self):
         return "%s" % self._node._id
 

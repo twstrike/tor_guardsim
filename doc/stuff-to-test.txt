@@ -56,7 +56,7 @@ Metrics we are interested in:
    * Total bandwidth - OK
 
    Reachability related:
-   * Time (or number of guards) till we manage to build first circuit
+   * Time (or number of guards) till we manage to build first circuit - OK (time)
    * Time till we manage to recover from flaky network
     
    Security related: 

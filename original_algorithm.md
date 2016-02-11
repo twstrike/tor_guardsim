@@ -9,7 +9,8 @@
 ### ON_BOOTSTRAP (no existing guards)
   1. RECEIVE_NEW_CONSENSUS
   2. From listed guards in ALL_GUARD_LIST with DIRECTORY_GUARD=true: 
-    1. 3 times do (default guard value on startup): 
+    1. 3 times do (default guard value on startup):
+      [This is from NumDirectoryGuards=3 -rjunior]
       1. ADD_RANDOM_ENTRYGUARD to choose a guard
       2. Add this new guard to GUARD_LIST
 

@@ -29,7 +29,7 @@ class Client(object):
 
         # Bootstrap Tor
         self.updateGuardLists()
-        self.pickEntryGuards(3)
+        self.pickEntryGuards(True)
 
     def updateGuardLists(self):
         """Called at start and when a new consensus should be made & received:
@@ -95,28 +95,49 @@ class Client(object):
 
         self._GUARD_LIST = [guard for guard in self._GUARD_LIST if guard not in toRemove]
 
-    def pickEntryGuards(self, numNeeded):
-        while not self.numLiveEntryGuards() >= numNeeded:
-	    self.addAnEntryGuard()
+    def pickEntryGuards(self, forDirectory):
+	numNeeded = self.decideNumGuards(forDirectory)
+        while not self.numLiveEntryGuards(forDirectory) >= numNeeded:
+	    if not self.addAnEntryGuard(forDirectory): break
 
-    def numLiveEntryGuards(self, forDirectory=False):
+    def numLiveEntryGuards(self, forDirectory):
 	live = [g for g in self._GUARD_LIST if not (forDirectory and not g._isDirectoryCache) and tor.entry_is_live(g) ]
 	return len(live)
 
-    def addAnEntryGuard(self, forDirectory=False):
-	g = self.choose_random_entryguard()
+    def addAnEntryGuard(self, forDirectory):
+	g = None
 
-        now = simtime.now()
-        g._addedAt = random.randint(now - 3600*24*30, now-1)
+	if not forDirectory:
+	    g = self.chooseGoodEntryServer()
+	else:
+	    g = self.routerPickDirectoryServer()
 
-    def choose_random_entryguard(self):
+	if not g: return None
+
+	# Dont add what it already in the list.
+	if g not in self._GUARD_LIST: return None
+
+	now = simtime.now()
+	g._addedAt = random.randint(now - 3600*24*30, now-1)
+
+	return g
+
+    def routerPickDirectoryServer(self):
+        # allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]
+	g = random.choice(self._ALL_GUARDS)
+	# XXX should we simulate the busy behaviot here?
+	# if g._isBusy: return None
+
+    def chooseGoodEntryServer(self):
         allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]
         guard = tor.choose_node_by_bandwidth_weights(allButCurrent)
         print("Adding %s to GUARD_LIST" % guard)
         self._GUARD_LIST.append(guard)
 	return guard
 
-    def populateLiveEntryGuards(self, numNeeded, forDirectory=False):
+    def populateLiveEntryGuards(self, forDirectory):
+	numNeeded = self.decideNumGuards(forDirectory)
+
         liveEntryGuards = []
         for guard in self._GUARD_LIST:
 	    if forDirectory and not guard._isDirectoryCache: continue
@@ -130,23 +151,27 @@ class Client(object):
         return (liveEntryGuards, False)
 
     def getGuard(self):
+	return self.chooseRandomEntryImpl(False)
+
+    def decideNumGuards(self, forDirectory):
         # After bootstrap, Tor requires only 1 guard
-        numNeeded = 1
+	if forDirectory: return 3
+	return 1
 
+    def chooseRandomEntryImpl(self, forDirectory):
         # ensure we have something to populate from
-        self.pickEntryGuards(numNeeded) 
-
-        liveEntryGuards, shouldChoose = self.populateLiveEntryGuards(numNeeded)
+        self.pickEntryGuards(forDirectory) 
+        liveEntryGuards, shouldChoose = self.populateLiveEntryGuards(forDirectory)
 
         if shouldChoose:
             return random.choice(liveEntryGuards)
 
         # 2 is really arbitrary by Tor source code
         if len(liveEntryGuards) < 2:
-            self.choose_random_entryguard()
+            self.addAnEntryGuard(forDirectory)
 
         # Retry relaxing constraints (we dont have many, but this is how Tor does)
-        return self.getGuard()
+        return self.chooseRandomEntryImpl(forDirectory)
 
     def probeGuard(self, guard):
         """If it's up on the network, mark it up.

@@ -24,8 +24,7 @@ def makeOptionsParser():
     net_group.add_argument(
         "-N", "--total-relays", type=int,
         help=("The total number of relays in the simulated network.  If this "
-              "argument is not given, then a random number of relays in "
-              "[100, 10000] will be used."))
+              "argument is not given, then the default is 1000."))
     net_group.add_argument(
         "-R", "--node-reliability", type=float,
         help=("The reliability of each node - each node will be up by this probability after each churn. "
@@ -52,6 +51,10 @@ def makeOptionsParser():
     net_group.add_argument(
         "-S", "--switching-network", action="store_true",
         help=("Simulate a network that periodically switches between types."))
+
+    net_group.add_argument(
+        "-w", "--slow-recovery", action="store_true",
+        help=("Simulate a very slow network where nodes take an hour to recover."))
 
     # Other miscellaneous options
     parser.add_argument(

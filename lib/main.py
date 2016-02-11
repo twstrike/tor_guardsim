@@ -30,6 +30,8 @@ def trivialSimulation(args):
         net = tornet.SniperNetwork(net)
     if args.switching_network:
         net = tornet.SwitchingNetwork(net)
+    if args.slow_recovery:
+        net = tornet.SlowRecoveryNetwork(net)
 
     params = client.ClientParams(
         PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth,

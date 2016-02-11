@@ -73,7 +73,7 @@ class Node(object):
         """Return the hex id for this node"""
         return self._id
 
-    def updateRunning(self):
+    def updateRunning(self, recoveryTime=60):
         """Enough time has passed that some nodes are no longer running.
            Update this node randomly to see if it has come up or down."""
 
@@ -81,7 +81,7 @@ class Node(object):
         # XXXXX come back up.  I wonder if that matters for us.
 
         if not self._dead:
-          if self._down_since and not self._down_since + 3600 * random.random() < simtime.now():
+          if self._down_since and not self._down_since + recoveryTime * random.random() < simtime.now():
             return
 
           self._up = random.random() < self._reliability
@@ -201,11 +201,11 @@ class Network(object):
             self._wholenet.append(node)
         self._wholenet = random.sample(self._wholenet, num_nodes)
 
-    def updateRunning(self):
+    def updateRunning(self, recoveryTime=60):
         """Enough time has passed for some nodes to go down and some to come
            up."""
         for node in self._wholenet:
-            node.updateRunning()
+            node.updateRunning(recoveryTime)
 
     def probe_node_is_up(self, node):
         """Called when a simulated client is trying to connect to 'node'.
@@ -287,6 +287,18 @@ class DownNetwork(_NetworkDecorator):
     def probe_node_is_up(self, node):
         return False
 
+class SlowRecoveryNetwork(_NetworkDecorator):
+    """A network where nodes take an hour to recover."""
+
+    def __init__(self, network):
+        super(SlowRecoveryNetwork, self).__init__(network)
+
+    def updateRunning(self):
+        """Enough time has passed for some nodes to go down and some to come
+           up."""
+        self._network.updateRunning(recoveryTime=3600)
+
+
 class SwitchingNetwork(_NetworkDecorator):
     """A network where the network randomly switches between all kinds noted above."""
     def __init__(self, network):
@@ -294,7 +306,7 @@ class SwitchingNetwork(_NetworkDecorator):
         self._real_network = network
 
     def _switch_networks(self):
-        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork, self._real_network]
+        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork, self._real_network, SlowRecovery]
         newNet = random.choice(allNetworks)
         if newNet == self._real_network:
             print("Network switched to real network")

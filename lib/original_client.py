@@ -45,7 +45,15 @@ class Client(object):
         """Called at start and when a new consensus should be made & received:
            updates *TOPIC_GUARDS."""
 
-        # Mark every Guard we have as listed or unlisted.
+        self.updateListedStatus()
+        self.entryGuardSetStatus()
+        self.removeDeadEntryGuards()
+        self.removeObsoleteEntryGuards()
+
+    # Mark every Guard we have as listed or unlisted.
+    # This is actually for convenience, so we don't have to store the consensus
+    # and find a guard by ID to determine if it is listed.
+    def updateListedStatus(self):
         for g in self._GUARD_LIST:
             g.markUnlisted()
 
@@ -62,16 +70,14 @@ class Client(object):
 
             guard.markListed() # by defition listed is in the latest consensus
 
+    def entryGuardSetStatus(self):
         for guard in self._GUARD_LIST:
-            # if has reason
-            if not guard._listed or not guard._node._up:
-                if not guard._badSince:
-                   guard._badSince = simtime.now()
-            else:
-                guard._badSince = None
+            hasReason = not guard._listed or not guard._node._up
 
-        self.removeDeadEntryGuards()
-        self.removeObsoleteEntryGuards()
+            if not hasReason:
+                guard._badSince = None
+            elif not guard._badSince:
+                guard._badSince = simtime.now()
 
     def removeDeadEntryGuards(self):
         entryGuardRemoveAfter = 30*24*60*60

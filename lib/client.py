@@ -112,7 +112,7 @@ class ClientParams(object):
 class Guard(object):
     """Represents what a client knows about a guard."""
 
-    def __init__(self, node):
+    def __init__(self, node, pDirectoryCache=0.9):
         # tornet.Node instance
         self._node = node
 
@@ -122,13 +122,6 @@ class Guard(object):
         # True iff we have marked this node as up.
         self._markedUp = False
 
-        # When did we add it (simulated)?
-        # XXX is guard._addedAt = entry->chosen_on_date?
-        # XXX set by add_an_entry_guard()
-        # add_an_entry_guard() uses a random value for this
-        now = simtime.now()
-        self._addedAt = random.randint(now - 3600*24*30, now-1)
-
         # True iff the node is listed as a guard in the most recent consensus
         # XXX We are assuming this to be equivalent of
         # node_get_by_id(e->identity) == NULL
@@ -137,6 +130,17 @@ class Guard(object):
         ############################
         #--- From entry_guard_t ---#
         ############################
+
+        # When did we add it (simulated)?
+        # XXX is guard._addedAt = entry->chosen_on_date?
+        # XXX set by add_an_entry_guard()
+        # add_an_entry_guard() uses a random value for this
+        now = simtime.now()
+        self._addedAt = random.randint(now - 3600*24*30, now-1)
+
+        # Is this node a directory cache?
+        # XXX update pDirectoryCache with something closer to reality
+        self._isDirectoryCache = random.random() < pDirectoryCache
 
         # Time when the guard went to a bad state
         # XXX set by pathbias_measure_use_rate() - should we add to simulation?

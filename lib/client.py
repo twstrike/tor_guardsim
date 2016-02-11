@@ -136,11 +136,21 @@ class Guard(object):
 
         self._madeContact = None
 
+        # The following two are used in entry_is_time_to_retry()
+        # to determine whether we should retry an unreachable guard
+        # XXX my goal is to add support to this
+
+        # The time at which we first noticed we could not connect to this node
+        # This is set by entry_guards_parse_state()
+        self._unreachableSince = None
+
+        # The time at which we failed to connect to this node
+        # This is set by entry_guards_parse_state()
+        self._lastAttempted = None
+
         # XXX should we have:
-        # - unreachable_since
-        # - last_attempted
         # - can_retry
-        # ???
+        # - ???
 
     def __str__(self):
         return "%s" % self._node._id

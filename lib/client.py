@@ -255,8 +255,8 @@ class Stats(object):
 
         exposure = 0
         for k in keys:
+            exposure = self._EXPOSURE_TO_GUARDS[k]
             if k >= t: break
-            exposure += self._EXPOSURE_TO_GUARDS[k]
 
         return exposure
 

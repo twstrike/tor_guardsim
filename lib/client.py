@@ -730,8 +730,55 @@ class Client(object):
             self._stats.incrementCircuitFailureCount()
             return False
 
-        g = self.getGuard()
+        #g = self.getGuard()
+        g = ChooseGuardAlgorithm(self._net).run()
 
         if not g:
             return False
         return self.connectToGuard(g)
+
+
+class ChooseGuardAlgorithm(object):
+
+    STATE_PRIMARY_GUARDS = 1
+
+    def __init__(self, net):
+        self._net = net
+
+    def run(self):
+        usedGuards, excludeNodes = [], []
+        # TODO: this should come from  ClientParams.N_PRIMARY_GUARDS
+        statePrimaryGuards = self.chooseEntryGuardStart(usedGuards, excludeNodes, 3)
+        #self.chooseEntryGuardNext()
+        #self.chooseEntryGuardEnd()
+
+
+    def chooseEntryGuardStart(self, usedGuards, excludeNodes, nPrimaryGuards):
+        consensus = self._net.new_consensus()
+        #TODO: Who's telling us when to pick directory guards?
+        selectDirGuards = False
+        guards = filter(lambda n: n.V2flag, consensus) if selectDirGuards else consensus
+        utopicGuards = guards
+        dystopicGuards = filter(lambda n: n.seemsDystopic(), guards)
+        remainingUtopicGuards = self._filterUsedAndExcludedGuards(utopicGuards, usedGuards, excludeNodes)
+        remainingDystopicGuards = self._filterUsedAndExcludedGuards(dystopicGuards, usedGuards, excludeNodes)
+        primaryGuards = self._findPrimaryGuards(usedGuards, utopicGuards, nPrimaryGuards)
+        self._triedGuards, self._triedDystopicGuards = [], []
+        return ChooseGuardAlgorithm.STATE_PRIMARY_GUARDS
+
+
+    def _filterUsedAndExcludedGuards(self, guards, usedGuards, excludeNodes):
+            return self._substract(self._substract(guards, usedGuards), excludeNodes)
+
+
+    def _substract(self, a, b):
+        return [x for x in a if x not in b]
+
+
+    def _findPrimaryGuards(self, usedGuards, utopicGuards, nPrimaryGuards):
+            if usedGuards:
+                return usedGuards[:nPrimaryGuards]
+            else:
+                orderedUtopicGuards = sorted(utopicGuards, key = lambda n: n.bandwidth, reverse = True)
+                return orderedUtopicGuards[:nPrimaryGuards]
+

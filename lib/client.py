@@ -133,6 +133,8 @@ class Guard(object):
         # Time when the guard went to a bad state
         self._badSince = None
 
+        # False if we have never connected to this router, True if we have
+        # XXX This is set by add_an_entry_guard(), indirectly by learned_bridge_descriptor()
         self._madeContact = None
 
         # The time at which we first noticed we could not connect to this node

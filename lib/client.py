@@ -737,8 +737,8 @@ class Client(object):
             self._stats.incrementCircuitFailureCount()
             return False
 
-        #g = self.getGuard()
-        g = ChooseGuardAlgorithm(self._net).run()
+        g = self.getGuard()
+        #g = ChooseGuardAlgorithm(self._net).run()
 
         if not g:
             return False

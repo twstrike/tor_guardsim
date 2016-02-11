@@ -172,9 +172,7 @@ class Client(object):
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
         g = self.getGuard()
-
-        if not g:
-            return False
+        assert(g)
 
         succeeded = self.connectToGuard(g)
         willRetryPreviousGuards = self.entryGuardRegisterConnectStatus(g, succeeded)

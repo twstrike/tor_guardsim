@@ -36,6 +36,7 @@ def choose_array_element_by_weight(bandwidths):
 
     assert(false)
 
+# documentation is here: https://gitweb.torproject.org/torspec.git/tree/dir-spec.txt#n1662
 def compute_weighted_bandwidths(guards):
     weight_scale = 10000
 

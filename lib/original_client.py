@@ -22,12 +22,6 @@ class Client(object):
         # client statistics
         self._stats = stats
 
-        # all guards we know about. We consider all of them to be directory guards
-        # because they play an important role in the original algo, but this
-        # behavior could be controlled by (another) flag.
-        # XXX we are unsure if this list should include only what is in the
-        # latest consensus or if it should include guards from every consensus
-        # we ever received
         self._ALL_GUARDS = []
 
         # guard list for this client, default is 3
@@ -136,7 +130,6 @@ class Client(object):
         if shouldChoose:
             return random.choice(liveEntryGuards)
 
-        # XXX When are the guards in _GUARD_LIST gonna be revisited?
         # 2 is really arbitrary by Tor source code
         if len(liveEntryGuards) < 2:
             self.choose_random_entryguard()

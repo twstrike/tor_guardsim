@@ -9,6 +9,7 @@
 """
 
 import random
+import simtime
 
 from math import floor
 
@@ -50,6 +51,9 @@ class Node(object):
         # Some completely made up number for the bandwidth of this guard.
         self._bandwidth = 0
 
+        # Time went down
+        self._down_since = 0
+
     @property
     def bandwidth(self, alpha=1.0, beta=0.5, bandwidth_max=100000):
         """Completely make-believe bandwith.  It's calculated as a random point
@@ -77,7 +81,16 @@ class Node(object):
         # XXXXX come back up.  I wonder if that matters for us.
 
         if not self._dead:
-            self._up = random.random() < self._reliability
+          if self._down_since and not self._down_since + 3600 * random.random() < simtime.now():
+            return
+
+          self._up = random.random() < self._reliability
+          if self._up:
+            self._down_since = None
+          elif self._down_since:
+            return
+          else:
+            self._down_since = simtime.now()
 
     def kill(self):
         """Mark this node as completely off the network, until resurrect

@@ -2,19 +2,20 @@
 
 OPS=$(echo "${@:1}" | tr -d " ")
 FILENAME="scenario${OPS}"
+mkdir -p ./out
 
-echo "Plotting ${@:1} to $FILENAME"
+echo "Plotting ${@:1} to out/$FILENAME"
 
-echo "success total success-rate capacity 1 15 30 exposure-1 exposure-15 exposure-30 guards-till-first-circuit time-till-first-circuit" > ./${FILENAME}.txt
-./simulate "${@:1}" >> ./${FILENAME}.txt
+echo "success total success-rate capacity 1 15 30 exposure-1 exposure-15 exposure-30 guards-till-first-circuit time-till-first-circuit" > ./out/${FILENAME}.txt
+./simulate "${@:1}" >> ./out/${FILENAME}.txt
 
 # success rate
-gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; set yrange [0:110]; plot '${FILENAME}.txt' using 3 with points" \
-  > ./success_rate_with_${FILENAME}.png
+gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; set yrange [0:110]; plot './out/${FILENAME}.txt' using 3 with points" \
+  > ./out/success_rate_with_${FILENAME}.png
 
 # exposure
-gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; plot for [col=8:10] '${FILENAME}.txt' using col with points ls (col-7)" \
-  > ./exposure_with_${FILENAME}.png
+gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; plot for [col=8:10] './out/${FILENAME}.txt' using col with points ls (col-7)" \
+  > ./out/exposure_with_${FILENAME}.png
 
 # using 2:1 with points pt 3
 

@@ -7,6 +7,7 @@ import simtime
 
 # TODO implement prioritize bandwith behavior
 
+# This client always initializes with an empty tor state.
 class Client(object):
     """A stateful client implementation of the guard selection algorithm."""
 

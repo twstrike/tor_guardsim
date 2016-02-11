@@ -119,7 +119,6 @@ def _randport(pfascistfriendly):
     else:
         return random.randint(1,65535)
 
-
 class Network(object):
 
     """Base class to represent a simulated Tor network.  Very little is

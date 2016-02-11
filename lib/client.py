@@ -144,11 +144,9 @@ class Guard(object):
         self._madeContact = None
 
         # The time at which we first noticed we could not connect to this node
-        # This is set by entry_guards_parse_state()
         self._unreachableSince = None
 
         # The time at which we failed to connect to this node
-        # This is set by entry_guards_parse_state()
         self._lastAttempted = None
 
         # Should we retry connecting to this entry, in spite of having it

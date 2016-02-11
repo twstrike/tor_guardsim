@@ -14,7 +14,7 @@ gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set 
   > ./out/success_rate_with_${FILENAME}.png
 
 # exposure
-gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; plot for [col=8:10] './out/${FILENAME}.txt' using col with points ls (col-7)" \
+gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; plot for [col=8:10] './out/${FILENAME}.txt' using col with points ls 1+(col-8)*3" \
   > ./out/exposure_with_${FILENAME}.png
 
 # using 2:1 with points pt 3

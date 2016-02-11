@@ -136,7 +136,7 @@ class Guard(object):
 
         # Time when the guard went to a bad state
         # XXX set by pathbias_measure_use_rate() - should we add to simulation?
-        # XXX set by add_an_entry_guard() and entries_retry_helper()
+        # XXX set by add_an_entry_guard()
         self._badSince = None
 
         # False if we have never connected to this router, True if we have
@@ -153,7 +153,7 @@ class Guard(object):
 
         # Should we retry connecting to this entry, in spite of having it
         # marked as unreachable?
-        # XXX this is set by add_an_entry_guard() and entries_retry_helper()
+        # XXX this is set by add_an_entry_guard()
         self._canRetry = None
 
         # XXX should we add path_bias_disabled?

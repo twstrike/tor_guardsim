@@ -135,10 +135,6 @@ class Guard(object):
 
         self._madeContact = None
 
-        # The following two are used in entry_is_time_to_retry()
-        # to determine whether we should retry an unreachable guard
-        # XXX my goal is to add support to this
-
         # The time at which we first noticed we could not connect to this node
         # This is set by entry_guards_parse_state()
         self._unreachableSince = None

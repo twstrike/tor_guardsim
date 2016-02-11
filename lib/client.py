@@ -217,7 +217,7 @@ class Stats(object):
         self._CIRCUIT_FAILURES = 0
 
         self._EXPOSED_TO_GUARDS = []
-        self._EXPOSURE_TO_GUARDS = {}
+        self._EXPOSURE_AT = {}
 
     def addExposedTo(self, guard, when):
         try:
@@ -225,7 +225,7 @@ class Stats(object):
         except ValueError:
             self._EXPOSED_TO_GUARDS.append(guard)
 
-        exp = self._EXPOSURE_TO_GUARDS[when] = len(self._EXPOSED_TO_GUARDS)
+        exp = self._EXPOSURE_AT[when] = len(self._EXPOSED_TO_GUARDS)
 
     def incrementCircuitFailureCount(self):
         self._CIRCUIT_FAILURES += 1
@@ -249,14 +249,14 @@ class Stats(object):
                "(%d total due to network failures).") %
               (self._CIRCUIT_FAILURES, self._CIRCUIT_FAILURES_TOTAL))
 
-    def guardsExposureAfter(self, t):
-        keys = self._EXPOSURE_TO_GUARDS.keys()
-        keys.sort()
+    def guardsExposureAfter(self, time):
+        ticks = self._EXPOSURE_AT.keys()
+        ticks.sort()
 
         exposure = 0
-        for k in keys:
-            exposure = self._EXPOSURE_TO_GUARDS[k]
-            if k >= t: break
+        for t in ticks:
+            exposure = self._EXPOSURE_AT[t]
+            if t >= time: break
 
         return exposure
 

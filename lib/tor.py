@@ -72,6 +72,28 @@ def compute_weighted_bandwidths(guards):
     return bandwidths
 
 def entry_is_time_to_retry(guard, time):
+    if guard._lastAttempted < guard._unreachableSince:
+        return True
+
+    unreachableFor = time - guard._unreachableSince
+
+    TIME_MAX = 0x7fffffff
+    retryPeriods = [
+        (6*60*60,    60*60),
+        (3*24*60*60, 4*60*60),
+        (7*24*60*60, 18*60*60),
+        (TIME_MAX,   36*60*60)
+    ]
+
+    for periodDuration, intervalDuringPeriod in retryPeriods:
+        if unreachableFor <= periodDuration:
+            # XXX _lastAttempted can be None?
+            deadlineForRetry = guard._lastAttempted + intervalDuringPeriod
+            return now > deadlineForRetry
+
+    return False
+
+def node_is_unreliable(guard):
     # XXX TODO
     return False
 
@@ -82,3 +104,10 @@ def entry_is_live(guard):
     if not guard._canRetry and guard._unreachableSince and not entry_is_time_to_retry(guard, simtime.now()):
         return False
 
+    if not guard._listed:
+        return False
+
+    if node_is_unreliable(guard):
+        return False
+
+    return True

@@ -126,6 +126,8 @@ class Guard(object):
         self._addedAt = simtime.now()
 
         # True iff the node is listed as a guard in the most recent consensus
+        # XXX We are assuming this to be equivalent of
+        # node_get_by_id(e->identity) == NULL
         self._listed = True
 
         # Time when the guard went to a bad state

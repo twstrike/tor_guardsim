@@ -131,6 +131,8 @@ class Guard(object):
         self._listed = True
 
         # Time when the guard went to a bad state
+        # XXX set by pathbias_measure_use_rate() - should we add to simulation?
+        # XXX set by add_an_entry_guard() and entries_retry_helper()
         self._badSince = None
 
         # False if we have never connected to this router, True if we have

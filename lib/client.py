@@ -130,6 +130,10 @@ class Guard(object):
         # node_get_by_id(e->identity) == NULL
         self._listed = True
 
+        ############################
+        #--- From entry_guard_t ---#
+        ############################
+
         # Time when the guard went to a bad state
         # XXX set by pathbias_measure_use_rate() - should we add to simulation?
         # XXX set by add_an_entry_guard() and entries_retry_helper()

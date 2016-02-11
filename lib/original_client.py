@@ -90,7 +90,6 @@ class Client(object):
 
         toRemove = []
         for guard in self._GUARD_LIST:
-            # XXX is guard._addedAt = entry->chosen_on_date?
             if guard._addedAt + guardLifetime < simtime.now():
                 toRemove.append(guard)
 

@@ -123,7 +123,11 @@ class Guard(object):
         self._markedUp = False
 
         # When did we add it (simulated)?
-        self._addedAt = simtime.now()
+        # XXX is guard._addedAt = entry->chosen_on_date?
+        # XXX set by add_an_entry_guard()
+        # add_an_entry_guard() uses a random value for this
+        now = simtime.now()
+        self._addedAt = random.randint(now - 3600*24*30, now-1)
 
         # True iff the node is listed as a guard in the most recent consensus
         # XXX We are assuming this to be equivalent of

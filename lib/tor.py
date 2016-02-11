@@ -93,10 +93,6 @@ def entry_is_time_to_retry(guard, time):
 
     return False
 
-def node_is_unreliable(guard):
-    # XXX TODO
-    return False
-
 def entry_is_live(guard):
     if guard._badSince:
         return False
@@ -107,7 +103,6 @@ def entry_is_live(guard):
     if not guard._listed:
         return False
 
-    if node_is_unreliable(guard):
-        return False
+    #XXX Add node_is_unreliable ?
 
     return True

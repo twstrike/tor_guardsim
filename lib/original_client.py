@@ -109,7 +109,7 @@ class Client(object):
     def populateLiveEntryGuards(self, numNeeded):
         liveEntryGuards = []
         for guard in self._GUARD_LIST:
-            if not guard.canTry(): continue
+            if not tor.entry_is_live(guard): continue
             liveEntryGuards.append(guard)
 
             if not guard._madeContact: return (liveEntryGuards, True)

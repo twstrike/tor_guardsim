@@ -208,6 +208,10 @@ class Guard(object):
         """
         return self._listed
 
+    def isUp(self):
+        """Return true iff the guard is up"""
+        return self.node._node_up
+
     def markForRetry(self):
         """Mark this guard as untried, so that we'll be willing to try it
         again.
@@ -222,6 +226,9 @@ class Guard(object):
         simulated seconds.
         """
         return self._addedAt + nSec >= simtime.now()
+
+    def isBad(self):
+        return self.isListed() or not self.isUp()
 
 class Stats(object):
     """Contains information about the stats of several runs over potentially
@@ -748,23 +755,34 @@ class ChooseGuardAlgorithm(object):
     def run(self):
         usedGuards, excludeNodes = [], []
         # TODO: this should come from  ClientParams.N_PRIMARY_GUARDS
-        statePrimaryGuards = self.chooseEntryGuardStart(usedGuards, excludeNodes, 3)
-        #self.chooseEntryGuardNext()
-        #self.chooseEntryGuardEnd()
+        statePrimaryGuards = self.start(usedGuards, excludeNodes, 3)
+        self.getNext(usedGuards)
+        #self.end()
 
 
-    def chooseEntryGuardStart(self, usedGuards, excludeNodes, nPrimaryGuards):
-        consensus = self._net.new_consensus()
+    def start(self, usedGuards, excludeNodes, nPrimaryGuards):
+        self.consensus = self._net.new_consensus()
         #TODO: Who's telling us when to pick directory guards?
         selectDirGuards = False
-        guards = filter(lambda n: n.V2flag, consensus) if selectDirGuards else consensus
-        utopicGuards = guards
-        dystopicGuards = filter(lambda n: n.seemsDystopic(), guards)
-        remainingUtopicGuards = self._filterUsedAndExcludedGuards(utopicGuards, usedGuards, excludeNodes)
+        guards = [n for n in self.consensus if n.V2flag] if selectDirGuards else self.consensus
+        self.guards = set([Guard(n) for n in guards])
+
+        #TODO: verify all guards are utopic guards
+        self.utopicGuards = self.guards
+        dystopicGuards = filter(lambda g: g.node.seemsDystopic(), self.guards)
+        remainingUtopicGuards = self._filterUsedAndExcludedGuards(self.utopicGuards, usedGuards, excludeNodes)
         remainingDystopicGuards = self._filterUsedAndExcludedGuards(dystopicGuards, usedGuards, excludeNodes)
-        primaryGuards = self._findPrimaryGuards(usedGuards, utopicGuards, nPrimaryGuards)
+        self._primaryGuards = self._findPrimaryGuards(usedGuards, nPrimaryGuards)
         self._triedGuards, self._triedDystopicGuards = [], []
         return ChooseGuardAlgorithm.STATE_PRIMARY_GUARDS
+
+
+    def getNext(self, usedGuards):
+        freshConsensus = self._net.new_consensus()
+        theresNewConsensus = sorted(freshConsensus) != sorted(self.consensus)
+        if theresNewConsensus:
+            self._updateGuardsWith(freshConsensus)
+            self._updatePrimaryGuards(usedGuards)
 
 
     def _filterUsedAndExcludedGuards(self, guards, usedGuards, excludeNodes):
@@ -775,10 +793,28 @@ class ChooseGuardAlgorithm(object):
         return [x for x in a if x not in b]
 
 
-    def _findPrimaryGuards(self, usedGuards, utopicGuards, nPrimaryGuards):
-            if usedGuards:
-                return usedGuards[:nPrimaryGuards]
-            else:
-                orderedUtopicGuards = sorted(utopicGuards, key = lambda n: n.bandwidth, reverse = True)
-                return orderedUtopicGuards[:nPrimaryGuards]
+    def _findPrimaryGuards(self, usedGuards, nPrimaryGuards):
+        if usedGuards:
+            notBad = [g for g in usedGuards if (not g.isBad() and g not in self._primaryGuards)]
+            return notBad[:nPrinaryGuards]
+        else:
+            orderedUtopicGuards = sorted(self.utopicGuards, key = lambda g: g.node.bandwidth, reverse = True)
+            return orderedUtopicGuards[:nPrimaryGuards]
+
+
+    def _updateGuardsWith(self, freshConsensus):
+        nodesInCurrentConsensus = set([g.node for g in self.guards])
+        # TODO: What to do if comes a new "fresh" guard in the consensus? Just add??
+        guardsUpdatedInFreshConsensus = set([Guard(n) for n in freshConsensus if n in nodesInCurrentConsensus])
+        self.guards.update(guardsUpdatedInFreshConsensus)
+
+
+    def _updatePrimaryGuards(self, usedGuards):
+        for pg in self._primaryGuards:
+            if pg.isBad():
+                self._primaryGuards.remove(pg)
+                    
+        #TODO: not to use magic number, this should comes from config
+        toAdd = 3 - len(self._primaryGuards)
+        self._primaryGuards.extend(self._findPrimaryGuards(usedGuards, toAdd))
 

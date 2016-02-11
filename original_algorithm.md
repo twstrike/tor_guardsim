@@ -8,11 +8,9 @@
 
 ### ON_BOOTSTRAP (no existing guards)
   1. RECEIVE_NEW_CONSENSUS
-  2. From listed guards in ALL_GUARD_LIST with DIRECTORY_GUARD=true: 
-    1. 3 times do (default guard value on startup):
-      [This is from NumDirectoryGuards=3 -rjunior]
-      1. ADD_RANDOM_ENTRYGUARD to choose a guard
-      2. Add this new guard to GUARD_LIST
+  2. From listed guards in ALL_GUARD_LIST:
+    1. Choose 3 new guards using ADD_RANDOM_ENTRYGUARD, with DIRECTORY_GUARD=true, NUM_NEEDED=3
+    2. Add these new guards to GUARD_LIST
 
 ### RECEIVE_NEW_CONSENSUS
   1. Mark guards that are not listed in the latest consensus as "bad" in ALL_GUARD_LIST

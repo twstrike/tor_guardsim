@@ -36,11 +36,6 @@ class Client(object):
         self.updateGuardLists()
         self.pickEntryGuards(3)
 
-    def entryGuardsComputeStatus(self):
-        for guard in self._GUARD_LIST:
-            pass
-            # if guard is not
-
     def updateGuardLists(self):
         """Called at start and when a new consensus should be made & received:
            updates *TOPIC_GUARDS."""

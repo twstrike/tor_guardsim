@@ -5,6 +5,8 @@
 - DIRECTORY_GUARD = if we select guards with the V2Dir flag. Guards with the V2Dir Flag can be used as entry guards for both fetching information from directories as well as for standard entry guards.
 - NUM_NEEDED = the number of entry guards that we want to select from GUARD_LIST to build LIVE_ENTRY_GUARDS.
 - LIVE_ENTRY_GUARDS = guards from GUARD_LIST that are listed in the latest consensus and are not both offline and have been previously tried.
+- MADE_CONTACT = we have tried and succeeded in connecting
+- TRIED = we have tried connected and either succeeded or failed
 
 ### ON_BOOTSTRAP (no existing guards)
   1. RECEIVE_NEW_CONSENSUS
@@ -27,10 +29,10 @@
       1. Use the ADD_RANDOM_ENTRYGUARD algorithm to choose a new guard, DIRECTORY_GUARD=false
       2. Add new guard to GUARD_LIST
   2. From GUARD_LIST of entry guards:
-    1. Build LIVE_GUARDS
+    1. Build LIVE_ENTRY_GUARDS
       1. If we succeed building LIVE_GUARDS with either (or both) of the following conditions, then we choose one guard at random:
-        1. In order to reduce exposure to guards, LIVE_GUARDS will have at max 1 guard that has not been tried.
-        2. At max, LIVE_GUARDS contains NUM_NEEDED guards (listed and known to be not offline)
+        1. In order to reduce exposure to guards, LIVE_ENTRY_GUARDS will have at max 1 guard that we have not MADE_CONTACT
+        2. At max, LIVE_ENTRY_GUARDS contains NUM_NEEDED guards (listed and known to be not offline)
     2. Otherwise:
       1. Relax our constraints (bandwidth, uptime, for directory, etc), and
       2. Use the ADD_RANDOM_ENTRYGUARD algorithm to choose a new guard

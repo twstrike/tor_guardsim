@@ -97,22 +97,31 @@ class Client(object):
 
     def pickEntryGuards(self, numNeeded):
         while not self.numLiveEntryGuards() >= numNeeded:
-            self.choose_random_entryguard()
+	    self.addAnEntryGuard()
 
     def numLiveEntryGuards(self, forDirectory=False):
 	live = [g for g in self._GUARD_LIST if not (forDirectory and not g._isDirectoryCache) and tor.entry_is_live(g) ]
 	return len(live)
+
+    def addAnEntryGuard(self, forDirectory=False):
+	g = self.choose_random_entryguard()
+
+        now = simtime.now()
+        g._addedAt = random.randint(now - 3600*24*30, now-1)
 
     def choose_random_entryguard(self):
         allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]
         guard = tor.choose_node_by_bandwidth_weights(allButCurrent)
         print("Adding %s to GUARD_LIST" % guard)
         self._GUARD_LIST.append(guard)
+	return guard
 
-    def populateLiveEntryGuards(self, numNeeded):
+    def populateLiveEntryGuards(self, numNeeded, forDirectory=False):
         liveEntryGuards = []
         for guard in self._GUARD_LIST:
+	    if forDirectory and not guard._isDirectoryCache: continue
             if not tor.entry_is_live(guard): continue
+
             liveEntryGuards.append(guard)
 
             if not guard._madeContact: return (liveEntryGuards, True)

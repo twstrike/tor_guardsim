@@ -133,10 +133,7 @@ class Guard(object):
 
         # When did we add it (simulated)?
         # XXX is guard._addedAt = entry->chosen_on_date?
-        # XXX set by add_an_entry_guard()
-        # add_an_entry_guard() uses a random value for this
-        now = simtime.now()
-        self._addedAt = random.randint(now - 3600*24*30, now-1)
+        self._addedAt = None
 
         # Is this node a directory cache?
         # XXX update pDirectoryCache with something closer to reality

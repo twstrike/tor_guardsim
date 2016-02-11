@@ -70,3 +70,15 @@ def compute_weighted_bandwidths(guards):
         bandwidths.append(final_weight + 0.5)
 
     return bandwidths
+
+def entry_is_time_to_retry(guard, time):
+    # XXX TODO
+    return False
+
+def entry_is_live(guard):
+    if guard._badSince:
+        return False
+
+    if not guard._canRetry and guard._unreachableSince and not entry_is_time_to_retry(guard, simtime.now()):
+        return False
+

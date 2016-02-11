@@ -148,9 +148,9 @@ class Guard(object):
         # This is set by entry_guards_parse_state()
         self._lastAttempted = None
 
-        # XXX should we have:
-        # - can_retry
-        # - ???
+        # Should we retry connecting to this entry, in spite of having it
+        # marked as unreachable?
+        self._canRetry = None
 
     def __str__(self):
         return "%s" % self._node._id

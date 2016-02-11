@@ -4,6 +4,6 @@ TIMES=1000
 
 for i in `seq 1 $TIMES`;
 do
-  OUTPUT=$(./lib/main.py ${@:1} | tail -n 3 | grep -E "[0-9.]+" -o | xargs)
+  OUTPUT=$(./lib/main.py ${@:1} | tail -n 6 | grep -E "[0-9.]+" -o | xargs)
   echo "$OUTPUT"
 done

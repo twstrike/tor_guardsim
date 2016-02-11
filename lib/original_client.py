@@ -96,9 +96,12 @@ class Client(object):
         self._GUARD_LIST = [guard for guard in self._GUARD_LIST if guard not in toRemove]
 
     def pickEntryGuards(self, numNeeded):
-        # Add new guards until we have enough
-        while not len(self._GUARD_LIST) >= numNeeded:
+        while not self.numLiveEntryGuards() >= numNeeded:
             self.choose_random_entryguard()
+
+    def numLiveEntryGuards(self, forDirectory=False):
+	live = [g for g in self._GUARD_LIST if not (forDirectory and not g._isDirectoryCache) and tor.entry_is_live(g) ]
+	return len(live)
 
     def choose_random_entryguard(self):
         allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]

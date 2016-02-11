@@ -145,6 +145,7 @@ class Guard(object):
 
         # Should we retry connecting to this entry, in spite of having it
         # marked as unreachable?
+        # XXX this is set by add_an_entry_guard() and entries_retry_helper()
         self._canRetry = None
 
         # XXX should we add path_bias_disabled?

@@ -12,6 +12,8 @@ def choose_node_by_bandwidth_weights(all_guards):
 def scale_array_elements_to_u64(bandwidths):
     scale_max = sys.maxint / 4
     total = sum(bandwidths)
+    if total == 0: return []
+
     scale_factor = scale_max / total
 
     return [int(round(i * scale_factor)) for i in bandwidths]

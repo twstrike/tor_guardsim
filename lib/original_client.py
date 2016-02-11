@@ -112,7 +112,7 @@ class Client(object):
             if not guard.canTry(): continue
             liveEntryGuards.append(guard)
 
-            if not guard._tried: return (liveEntryGuards, True)
+            if not guard._madeContact: return (liveEntryGuards, True)
             if len(liveEntryGuards) >= numNeeded: return (liveEntryGuards, True)
 
         return (liveEntryGuards, False)
@@ -186,6 +186,10 @@ class Client(object):
             # First contact made with this guard
             if not guard._madeContact:
                 guard._madeContact = True
+                # We've just added a new long-term entry guard. Perhaps the network just
+                # came back? We should give our earlier entries another try too,
+                # and close this connection so we don't use it before we've given
+                # the others a shot.
                 self.markAllButThisForRetry(guard)
         else:
             if not guard._madeContact:

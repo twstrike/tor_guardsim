@@ -122,9 +122,6 @@ class Guard(object):
         # True iff we have marked this node as up.
         self._markedUp = False
 
-        # True iff we've attempted to connect to this node.
-        self._tried = False
-
         # When did we add it (simulated)?
         self._addedAt = simtime.now()
 
@@ -164,7 +161,6 @@ class Guard(object):
         """Mark this guard as up or down because of a successful/unsuccessful
         connection attempt.
         """
-        self._tried = True
         if up:
             if not self._markedUp:
                 print("Marked %s (%stopic) up" %
@@ -192,7 +188,8 @@ class Guard(object):
 
     def canTry(self):
         """Return true iff we can try to make a connection to this guard."""
-        return self._listed and not (self._tried and self._markedDown)
+        # XXXX this should be extended according to tor code
+        return self._listed and not (self._madeContact and self._markedDown)
 
     def isListed(self):
         """Return true iff the guard is listed in the most recent consensus
@@ -207,7 +204,7 @@ class Guard(object):
         # XXXX We never call this unless _all_ the guards in group seem
         # XXXX down.  But maybe we should give early guards in a list
         # XXXX a chance again after a while?
-        self._tried = False
+        self._canRetry = True
 
     def addedWithin(self, nSec):
         """Return ``True`` iff this guard was added within the last **nSec**

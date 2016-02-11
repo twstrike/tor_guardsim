@@ -41,9 +41,8 @@ class Client(object):
            updates *TOPIC_GUARDS."""
 
         self.updateListedStatus()
-        self.entryGuardSetStatus()
-        self.removeDeadEntryGuards()
-        self.removeObsoleteEntryGuards()
+
+        self.entryGuardsComputeStatus()
 
     # Mark every Guard we have as listed or unlisted.
     # This is actually for convenience, so we don't have to store the consensus
@@ -65,8 +64,14 @@ class Client(object):
 
             guard.markListed() # by defition listed is in the latest consensus
 
+    def entryGuardsComputeStatus(self):
+        self.entryGuardSetStatus()
+        self.removeDeadEntryGuards()
+        self.removeObsoleteEntryGuards()
+
     def entryGuardSetStatus(self):
         for guard in self._GUARD_LIST:
+            # XXX should guard._node._up represent node->is_running?
             hasReason = not guard._listed or not guard._node._up
 
             if not hasReason:
@@ -90,6 +95,7 @@ class Client(object):
 
         toRemove = []
         for guard in self._GUARD_LIST:
+            # XXX is guard._addedAt = entry->chosen_on_date?
             if guard._addedAt + guardLifetime < simtime.now():
                 toRemove.append(guard)
 
@@ -161,6 +167,8 @@ class Client(object):
     def markGuard(self, guard, up):
         guard.mark(up)
 
+    # XXX this builds a circuit for an outgoing channel.
+    # This is the path we take in channel_do_open_actions()
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
         g = self.getGuard()
@@ -169,19 +177,29 @@ class Client(object):
             return False
 
         succeeded = self.connectToGuard(g)
-        self.entryGuardRegisterConnectStatus(g, succeeded)
+        willRetryPreviousGuards = self.entryGuardRegisterConnectStatus(g, succeeded)
+
+        if willRetryPreviousGuards:
+            # XXX close any circuits pending on this channel.
+            # The channel is left in state OPEN becuase it did not fail,
+            # we just chose not to use it.
+            # See: channel_do_open_actions()
+            # XXX how should it reflect on the simulation?
+            pass
 
         return succeeded
 
+    # Returns True iff previous guards will be retried later
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
         if guard not in self._GUARD_LIST:
-            return
+            return False
 
+        now = simtime.now()
         if succeeded:
-            # if entry->unreachable_since:
-                # entry->can_retry = 0;
-                # entry->unreachable_since = 0;
-                # entry->last_attempted = now;
+            if guard._unreachableSince:
+                guard._canRetry = False
+                guard._unreachableSince = None # should it be 0?
+                guard._lastAttempted = now
 
             # First contact made with this guard
             if not guard._madeContact:
@@ -190,23 +208,37 @@ class Client(object):
                 # came back? We should give our earlier entries another try too,
                 # and close this connection so we don't use it before we've given
                 # the others a shot.
-                self.markAllButThisForRetry(guard)
+                return self.markAllButThisForRetry(guard)
         else:
             if not guard._madeContact:
                 print("Remove guard we never made contact with %s" % guard)
                 self._GUARD_LIST = [g for g in self._GUARD_LIST if g != guard ]
+            elif not guard._unreachableSince:
+                guard._unreachableSince = now
+                guard._lastAttempted = now 
+                guard._canRetry = False
             else:
                 # We might neet to introduce can_retry
                 # This prevents the guard to be tried again. See canTry
                 # entry->can_retry = False
-                guard.mark(False)
-                # entry->last_attempted = now
+                guard._canRetry = False
+                guard._lastAttempted = now
 
+        return False
+
+    # Returns True iff previous guards will be retried later
     def markAllButThisForRetry(self, guard):
         print("Mark all but %s for RETRY" % guard)
+
+        willRetryGuards = False
         for g in self._GUARD_LIST:
-            if g == guard: continue
+            if g == guard: break
+
             # this should be if entry_is_live()
-            if g._listed: g.markForRetry()
+            if g._madeContact and tor.entry_is_live(guard) and guard._unreachableSince:
+                g._canRetry = True
+                willRetryGuards = True
+
+        return willRetryGuards
 
 

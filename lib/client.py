@@ -151,6 +151,8 @@ class Guard(object):
         # marked as unreachable?
         self._canRetry = None
 
+        # XXX should we add path_bias_disabled?
+
     def __str__(self):
         return "%s" % self._node._id
 

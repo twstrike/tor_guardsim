@@ -1,5 +1,6 @@
 import random
 import sys
+import simtime
 
 def choose_node_by_bandwidth_weights(all_guards):
     bandwidths = compute_weighted_bandwidths(all_guards)
@@ -89,7 +90,7 @@ def entry_is_time_to_retry(guard, time):
         if unreachableFor <= periodDuration:
             # XXX _lastAttempted can be None?
             deadlineForRetry = guard._lastAttempted + intervalDuringPeriod
-            return now > deadlineForRetry
+            return time > deadlineForRetry
 
     return False
 

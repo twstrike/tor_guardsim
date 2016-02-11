@@ -139,7 +139,6 @@ class Guard(object):
         # XXX should we have:
         # - unreachable_since
         # - last_attempted
-        # - bad_since
         # - can_retry
         # ???
 

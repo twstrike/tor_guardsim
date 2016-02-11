@@ -4,7 +4,7 @@ set -xe
 
 # legacy
 ./plot -L
-./plot -L -r
+# ./plot -L -r # It does not make sense atm
 
 # 259
 ./plot 

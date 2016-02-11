@@ -245,9 +245,7 @@ class Stats(object):
         self._EXPOSURE_AT = {}
 
     def addExposedTo(self, guard, when):
-        try:
-            self._EXPOSED_TO_GUARDS.index(guard)
-        except ValueError:
+	if guard not in self._EXPOSED_TO_GUARDS:
             self._EXPOSED_TO_GUARDS.append(guard)
 
         exp = self._EXPOSURE_AT[when] = len(self._EXPOSED_TO_GUARDS)

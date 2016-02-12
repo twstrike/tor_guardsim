@@ -1,18 +1,23 @@
 ## Existing Tor Guard Selection Algorithm
 
+### Data Structures
 - ALL_GUARD_LIST = guard information from latest consensus
 - GUARD_LIST = guards persisted to our state file
+- LIVE_ENTRY_GUARDS = guards from GUARD_LIST that is: 1) listed in the latest consensus, 2) not offline and 2) we have not previously tried. There are other criteria, see `entry_is_live` in Tor.
+
+### Guard criteria
 - DIRECTORY_GUARD = if we select guards with the V2Dir flag. Guards with the V2Dir Flag can be used as entry guards for both fetching information from directories as well as for standard entry guards.
-- NUM_NEEDED = the number of entry guards that we want to select from GUARD_LIST to build LIVE_ENTRY_GUARDS.
-- LIVE_ENTRY_GUARDS = guards from GUARD_LIST that are listed in the latest consensus that are not: 1) offline and 2) we have previously tried.
 - MADE_CONTACT = we have tried and succeeded in connecting to this guard
 - TRIED = we have tried connected and either succeeded or failed to this guard
 - ADDED_AT = when this guard was added to the consensus
 
+### Other
+- NUM_NEEDED = the number of entry guards that we want to select from GUARD_LIST to build LIVE_ENTRY_GUARDS.
+
 ### ON_BOOTSTRAP (no existing guards)
   1. RECEIVE_NEW_CONSENSUS
   2. From listed guards in ALL_GUARD_LIST:
-    1. Choose 3 new guards using CHOOSE_RANDOM_ENTRYGUARD, with DIRECTORY_GUARD=true, NUM_NEEDED=3
+    1. Choose 3 new guards that are both DIRECTORY_GUARDS and LIVE_ENTRY_GUARDS
     2. Add these new guards to GUARD_LIST
 
 ### RECEIVE_NEW_CONSENSUS
@@ -21,14 +26,14 @@
   3. Remove guards that were added more than 30 days ago from GUARD_LIST and ALL_GUARD_LIST
 
 ### BUILD_NEW_CIRCUIT
-  1. CHOOSE_A_GUARD (NUM_NEEDED=1, DIRECTORY_GUARD=FALSE)
+  1. CHOOSE_A_GUARD (DIRECTORY_GUARD=FALSE)
   2. CONNECT_ENTRY_GUARD with our chosen guard
 
-### CHOOSE_A_GUARD(NUM_NEEDED)
-  1. Ensure that we have enough entry guards
+### CHOOSE_A_GUARD(NUM_NEEDED, DIRECTORY_GUARD)
+  1. Ensure that we have enough entry guards, for the DIRECTORY_GUARD condition
     1. If we do not:
       1. Add new guard to GUARD_LIST
-    1.If we do:
+    1. If we do:
       1. Use the CHOOSE_RANDOM_ENTRYGUARD algorithm to choose a new guard, specifying if for DIRECTORY_GUARD
   2. From GUARD_LIST of entry guards:
     1. Build LIVE_ENTRY_GUARDS
@@ -56,3 +61,6 @@
     1. If we cannot connect:
       1. Mark this guard as offline
      2. [Maybe look at fallback behavior if this fails]
+
+### Other considerations
+  1. Path bias criteria

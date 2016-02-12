@@ -97,7 +97,7 @@ class Client(object):
 
     def pickEntryGuards(self, forDirectory):
 	numNeeded = self.decideNumGuards(forDirectory)
-        while not self.numLiveEntryGuards(forDirectory) >= numNeeded:
+        while self.numLiveEntryGuards(forDirectory) < numNeeded:
 	    if not self.addAnEntryGuard(forDirectory): break
 
     def numLiveEntryGuards(self, forDirectory):
@@ -128,8 +128,10 @@ class Client(object):
 	return g
 
     def routerPickDirectoryServer(self):
-        # allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]
-	g = random.choice(self._ALL_GUARDS)
+        # XXX we should use guard->is_running
+        guards = [g for g in self._ALL_GUARDS if g not in self._GUARD_LIST and g._node._up and g._isDirectoryCache]
+	g = random.choice(guards)
+
 	# XXX should we simulate the busy behaviot here?
 	# if g._isBusy: return None
         return g

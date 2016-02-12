@@ -115,10 +115,15 @@ class Client(object):
 	if not g: return None
 
 	# Dont add what it already in the list.
-	if g not in self._GUARD_LIST: return None
+	if g in self._GUARD_LIST: return None
+
+        print("Adding %s to GUARD_LIST" % g)
+        self._GUARD_LIST.append(g)
 
 	now = simtime.now()
 	g._addedAt = random.randint(now - 3600*24*30, now-1)
+
+        assert(tor.entry_is_live(g))
 
 	return g
 
@@ -127,12 +132,11 @@ class Client(object):
 	g = random.choice(self._ALL_GUARDS)
 	# XXX should we simulate the busy behaviot here?
 	# if g._isBusy: return None
+        return g
 
     def chooseGoodEntryServer(self):
         allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]
         guard = tor.choose_node_by_bandwidth_weights(allButCurrent)
-        print("Adding %s to GUARD_LIST" % guard)
-        self._GUARD_LIST.append(guard)
 	return guard
 
     def populateLiveEntryGuards(self, forDirectory):

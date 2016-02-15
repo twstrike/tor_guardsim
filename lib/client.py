@@ -736,8 +736,13 @@ class Client(object):
             self._stats.incrementCircuitFailureCount()
             return False
 
-        g = self.getGuard()
-        #g = ChooseGuardAlgorithm(self._net).run()
+        #g = self.getGuard()
+        g = ChooseGuardAlgorithm(self._net, self._p)
+        initialState = g.start([], [], self._p.N_PRIMARY_GUARDS)
+        while True:
+            entryGuard = g.getNext(initialState)
+            if self.connectToGuard(g):
+                g.end()
 
         if not g:
             return False
@@ -748,57 +753,75 @@ class ChooseGuardAlgorithm(object):
 
     STATE_PRIMARY_GUARDS = 1
 
-    def __init__(self, net):
+    def __init__(self, net, params):
         self._net = net
-
-    def run(self):
-        usedGuards, excludeNodes = [], []
-        # TODO: this should come from  ClientParams.N_PRIMARY_GUARDS
-        statePrimaryGuards = self.start(usedGuards, excludeNodes, 3)
-        self.getNext(usedGuards)
-        #self.end()
+        self._params = params
 
 
-    def start(self, usedGuards, excludeNodes, nPrimaryGuards):
-        self.consensus = self._net.new_consensus()
-        #TODO: Who's telling us when to pick directory guards?
-        selectDirGuards = False
-        guards = [n for n in self.consensus if n.V2flag] if selectDirGuards else self.consensus
-        self.guards = set([Guard(n) for n in guards])
+    def start(self, usedGuards, excludeNodes, nPrimaryGuards, selectDirGuards = False):
+        #ensure the used guards are ordered by priority
+        usedGuards.sort(key = "priority", reverse = True)
 
-        #TODO: verify all guards are utopic guards
-        self.utopicGuards = self.guards
-        dystopicGuards = filter(lambda g: g.node.seemsDystopic(), self.guards)
-        remainingUtopicGuards = self._filterUsedAndExcludedGuards(self.utopicGuards, usedGuards, excludeNodes)
-        remainingDystopicGuards = self._filterUsedAndExcludedGuards(dystopicGuards, usedGuards, excludeNodes)
-        self._primaryGuards = self._findPrimaryGuards(usedGuards, nPrimaryGuards)
+        excludeNodesSet = set(excludeNodes)
+        self._consensus = self._getLatestConsensus()
+        self._guards = self._getGuards(selectDirGuards, excludeNodesSet)
+        self._utopicGuards = self._guards
+        self._dystopicGuards = self._filterDystopicGuardsFrom(self._utopicGuards)
+        usedGuardsSet = set(usedGuards)
+        self._remainingUtopicGuards = self._utopicGuards - usedGuardsSet
+        self._remainingDystopicGuards = self._dystopicGuards - usedGuardsSet
         self._triedGuards, self._triedDystopicGuards = [], []
-        return ChooseGuardAlgorithm.STATE_PRIMARY_GUARDS
+        self._state = ChooseGuardAlgorithm.STATE_PRIMARY_GUARDS
+        self._primaryGuards = self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
+        return self._state
 
 
-    def getNext(self, usedGuards):
-        freshConsensus = self._net.new_consensus()
-        theresNewConsensus = sorted(freshConsensus) != sorted(self.consensus)
+    def getNext(self, initialState):
+        freshConsensus = self._getLatestConsensus()
+        theresNewConsensus = sorted(freshConsensus) != sorted(self._consensus)
         if theresNewConsensus:
             self._updateGuardsWith(freshConsensus)
             self._updatePrimaryGuards(usedGuards)
 
-
-    def _filterUsedAndExcludedGuards(self, guards, usedGuards, excludeNodes):
-            return self._substract(self._substract(guards, usedGuards), excludeNodes)
-
-
-    def _substract(self, a, b):
-        return [x for x in a if x not in b]
+    def end():
+        pass
 
 
-    def _findPrimaryGuards(self, usedGuards, nPrimaryGuards):
+    def _getLatestConsensus(self):
+        return self._net.new_consensus()
+
+
+    def _getGuards(self, selectDirGuards, excludeNodes):
+        guards = [n for n in self._consensus if n.V2flag] if selectDirGuards else self._consensus
+        guardsLessExclusions = set(guards) - excludeNodes
+        return set([Guard(n) for n in guardsLessExclusions])
+
+
+    def _filterDystopicGuardsFrom(self, guards):
+        return set([dg for dg in guards if dg.node.seemsDystopic()])
+
+
+    def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
+        #This is not taking into account the remaining dystopic guards. Is that okay?
+        primaryGuards = []
+        while len(primaryGuards) < nPrimaryGuards:
+            primaryGuards.append(self._nextPrimaryGuard(usedGuards, remainingUtopic))
+
+        return primaryGuards
+
+
+    def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
         if usedGuards:
-            notBad = [g for g in usedGuards if (not g.isBad() and g not in self._primaryGuards)]
-            return notBad[:nPrinaryGuards]
+            used = list(usedGuards)
+            while used:
+                guard = used.pop(0)
+                #TODO: What if is a bad guard? whatcha gonna do?
+                if guard not in self._primary_guards and guard in self._consensus:
+                    return guard
         else:
-            orderedUtopicGuards = sorted(self.utopicGuards, key = lambda g: g.node.bandwidth, reverse = True)
-            return orderedUtopicGuards[:nPrimaryGuards]
+            #TODO: should we weight by bandwidth here? Right now assumes is weighted.
+            i = random.randint(0, len(remainingUtopic))
+            return list(remainingUtopic).pop(i)
 
 
     def _updateGuardsWith(self, freshConsensus):

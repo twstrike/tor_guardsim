@@ -59,6 +59,11 @@ class Client(object):
 
             guard.markListed() # by defition listed is in the latest consensus
 
+        # Whatever is not in the consensus, we dont know about
+        # See nodelist_set_consensus()
+        for guard in [ g for g in self._GUARD_LIST if not g._listed]:
+            g._node._isRunning = False
+
     def entryGuardsComputeStatus(self):
         self.entryGuardSetStatus()
         self.removeDeadEntryGuards()
@@ -66,8 +71,7 @@ class Client(object):
 
     def entryGuardSetStatus(self):
         for guard in self._GUARD_LIST:
-            # XXX should guard._node._up represent node->is_running?
-            hasReason = not guard._listed or not guard._node._up
+            hasReason = not guard._listed or not guard._node._isRunning
 
             if not hasReason:
                 guard._badSince = None
@@ -128,8 +132,7 @@ class Client(object):
 	return g
 
     def routerPickDirectoryServer(self):
-        # XXX we should use guard->is_running
-        guards = [g for g in self._ALL_GUARDS if g not in self._GUARD_LIST and g._node._up and g._isDirectoryCache]
+        guards = [g for g in self._ALL_GUARDS if g not in self._GUARD_LIST and g._node._isRunning and g._isDirectoryCache]
 	g = random.choice(guards)
 
 	# XXX should we simulate the busy behaviot here?

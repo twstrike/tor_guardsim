@@ -54,6 +54,13 @@ class Node(object):
         # Time went down
         self._down_since = 0
 
+        #####################
+        #--- From node_t ---#
+        #####################
+
+        # As far as we know, is this OR currently running?
+        self._isRunning = random.random() < self._reliability
+
     @property
     def bandwidth(self, alpha=1.0, beta=0.5, bandwidth_max=100000):
         """Completely make-believe bandwith.  It's calculated as a random point
@@ -171,6 +178,8 @@ class Network(object):
         # total number of nodes ever added on the network.
         self._total = num_nodes
 
+    # XXX Why does a consensus returns only guards that are really up?
+    # This seems unrealistic
     def new_consensus(self):
         """Return a list of the running guard nodes."""
         return [ node for node in self._wholenet if node.isReallyUp() ]

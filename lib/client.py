@@ -783,7 +783,11 @@ class StateTryUtopic(object):
         context.markAsUnreachableAndAddToTriedList(guards)
 
         context.checkTriedTreshold(context._triedGuards)
+        context.checkFailover(context._triedGuards, context._utopicGuards, context.STATE_TRY_DYSTOPIC)
+        context.removeUnavailableRemainingUtopicGuardsByBandwidth() 
 
+        # XXX Is this duplicate by mistake?
+        context.checkTriedTreshold(context._triedGuards)
         context.checkFailover(context._triedGuards, context._utopicGuards, context.STATE_TRY_DYSTOPIC)
 
 class StateTryDystopic(object):
@@ -825,6 +829,8 @@ class ChooseGuardAlgorithm(object):
         self._primaryGuards = self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
         return self._state
 
+    def nextByBandwidth(self, guards):
+        return tor.choose_node_by_bandwidth_weights(guards)
 
     def nextGuard(self, initialState):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
@@ -834,11 +840,30 @@ class ChooseGuardAlgorithm(object):
 
         return self._state.next(self)
 
+    def removeUnavailableRemainingUtopicGuardsByBandwidth(self):
+        # XXX What is the difference of doing this by bandwidth if we are not
+        # returning anything?
+        # Does it make any difference if we are removing and marking in a different order?
+        guards = self._remainingUtopicGuards
+        while len(guards) > 0:
+            g = self.nextByBandwidth(guards)
+            guards.remove(g)
+
+            if self.markAsUnreachableAndRemoveAndAddToTriedList(g):
+                # XXX what guarantees it will be in triedGuards?
+                self._triedGuards.remove(g)
+
+    def markAsUnreachableAndRemoveAndAddToTriedList(self, guard, removeFrom=None):
+            if not self.wasNotPossibleToConnect(guard):
+                return None
+
+            self.markAsUnreachable(guard)
+            self.addToTried(guard)
+            return guard
+
     def markAsUnreachableAndAddToTriedList(self, guards):
         for pg in guards:
-            if self.wasNotPossibleToConnect(pg):
-                self.markAsUnreachable(pg)
-                self.addToTried(pg)
+            self.markAsUnreachableAndRemoveAndAddToTriedList(pg)
 
     def wasNotPossibleToConnect(self, guard):
         return guard._madeContact == False
@@ -853,8 +878,9 @@ class ChooseGuardAlgorithm(object):
         if len(tried) > treshold:
             self._state = self._STATE_RETRY_ONLY
 
-    def checkFailover(triedGuards, utopicGuards, nextState):
-        pass
+    def checkFailover(triedGuards, guards, nextState):
+        if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * guards:
+            self._state = nextState
 
     def allHaveBeenTried(self):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0

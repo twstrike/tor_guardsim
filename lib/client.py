@@ -766,16 +766,37 @@ class Client(object):
 class StatePrimaryGuards(object):
 
     def next(self, context):
-        context.markAsUnreachableAndAddToTriedList()
+        context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
         context.checkTriedTreshold(context._triedGuards)
 
         if context.allHaveBeenTried():
             context.transitionToPreviousStateOrTryUtopic()
 
+
+class StateTryUtopic(object):
+
+    def next(self, context):
+        context.moveOldTriedGuardsToRemainingList()
+
+        guards = [g for g in context._usedGuards if g not in context._primaryGuards]
+        context.markAsUnreachableAndAddToTriedList(guards)
+
+        context.checkTriedTreshold(context._triedGuards)
+
+        context.checkFailover(context._triedGuards, context._utopicGuards, context.STATE_TRY_DYSTOPIC)
+
+class StateTryDystopic(object):
+
+    def next(self, context):
+        pass
+
+
 class ChooseGuardAlgorithm(object):
 
     STATE_PRIMARY_GUARDS = StatePrimaryGuards()
+    STATE_TRY_UTOPIC = StateTryUtopic()
+    STATE_TRY_DYSTOPIC = StateTryDystopic()
 
     def __init__(self, net, params):
         self._net = net
@@ -789,8 +810,7 @@ class ChooseGuardAlgorithm(object):
 
     def start(self, usedGuards, excludeNodes, nPrimaryGuards, selectDirGuards = False):
         self._hasFinished = False
-        # Ensure the used guards are ordered by priority
-        usedGuards.sort(key = "priority", reverse = True)
+        self._usedGuards = usedGuards
 
         excludeNodesSet = set(excludeNodes)
         self._consensus = self._getLatestConsensus()
@@ -814,8 +834,8 @@ class ChooseGuardAlgorithm(object):
 
         return self._state.next(self)
 
-    def markAsUnreachableAndAddToTriedList(self):
-        for pg in self._primaryGuards:
+    def markAsUnreachableAndAddToTriedList(self, guards):
+        for pg in guards:
             if self.wasNotPossibleToConnect(pg):
                 self.markAsUnreachable(pg)
                 self.addToTried(pg)
@@ -831,7 +851,10 @@ class ChooseGuardAlgorithm(object):
         treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._consensus)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow ]
         if len(tried) > treshold:
-            self._state = self._STATE_RETRY_ONLY\
+            self._state = self._STATE_RETRY_ONLY
+
+    def checkFailover(triedGuards, utopicGuards, nextState):
+        pass
 
     def allHaveBeenTried(self):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
@@ -847,6 +870,14 @@ class ChooseGuardAlgorithm(object):
 
     def addToTried(self, guard):
         self._triedGuards.append(guard)
+
+
+    def moveOldTriedGuardsToRemainingList(self):
+        timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
+        for g in self._triedGuards:
+            if g.unreacheableSince and g.unreacheableSince < timeWindow:
+                self._remainingUtopicGuards.append(g)
+
 
     def _getLatestConsensus(self):
         return self._net.new_consensus()

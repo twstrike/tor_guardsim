@@ -109,6 +109,16 @@ class ClientParams(object):
         # If True, UTOPIC_GUARDS and DISTOPIC_GUARDS are disjoint
         self.DISJOINT_SETS = DISJOINT_SETS
 
+        #Time (in minutes) since we tried any of the primary guards
+        self.PRIMARY_GUARDS_RETRY_INTERVAL = 3
+
+        # Time (in minutes)
+        self.GUARDS_TRY_TRESHOLD_TIME = 120
+
+        # Percentage of total guards in the latest consensus we want to try in GUARDS_TRY_TRESHOLD_TIME minutes
+        self.GUARDS_TRY_TRESHOLD = 0.03
+
+
 class Guard(object):
     """Represents what a client knows about a guard."""
 
@@ -126,6 +136,10 @@ class Guard(object):
         # XXX We are assuming this to be equivalent of
         # node_get_by_id(e->identity) == NULL
         self._listed = True
+
+        # TODO: How is this different from lastAttempted?
+        # The timestamp of the last time it tried to connecto to this node.
+        self._lastTried = None
 
         ############################
         #--- From entry_guard_t ---#
@@ -749,9 +763,19 @@ class Client(object):
         return self.connectToGuard(g)
 
 
+class StatePrimaryGuards(object):
+
+    def next(self, context):
+        context.markAsUnreachableAndAddToTriedList()
+
+        context.checkTriedTreshold(context._triedGuards)
+
+        if context.allHaveBeenTried():
+            context.transitionToPreviousStateOrTryUtopic()
+
 class ChooseGuardAlgorithm(object):
 
-    STATE_PRIMARY_GUARDS = 1
+    STATE_PRIMARY_GUARDS = StatePrimaryGuards()
 
     def __init__(self, net, params):
         self._net = net
@@ -765,7 +789,7 @@ class ChooseGuardAlgorithm(object):
 
     def start(self, usedGuards, excludeNodes, nPrimaryGuards, selectDirGuards = False):
         self._hasFinished = False
-        #ensure the used guards are ordered by priority
+        # Ensure the used guards are ordered by priority
         usedGuards.sort(key = "priority", reverse = True)
 
         excludeNodesSet = set(excludeNodes)
@@ -777,21 +801,52 @@ class ChooseGuardAlgorithm(object):
         self._remainingUtopicGuards = self._utopicGuards - usedGuardsSet
         self._remainingDystopicGuards = self._dystopicGuards - usedGuardsSet
         self._triedGuards, self._triedDystopicGuards = [], []
-        self._state = ChooseGuardAlgorithm.STATE_PRIMARY_GUARDS
+        self._state = self.STATE_PRIMARY_GUARDS
         self._primaryGuards = self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
         return self._state
 
 
     def nextGuard(self, initialState):
-        freshConsensus = self._getLatestConsensus()
-        theresNewConsensus = sorted(freshConsensus) != sorted(self._consensus)
-        if theresNewConsensus:
-            self._updateGuardsWith(freshConsensus)
-            self._updatePrimaryGuards(usedGuards)
+        haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
+        if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
+            self._previousState = self._state
+            self._state = self.STATE_PRIMARY_GUARDS
+
+        return self._state.next(self)
+
+    def markAsUnreachableAndAddToTriedList(self):
+        for pg in self._primaryGuards:
+            if self.wasNotPossibleToConnect(pg):
+                self.markAsUnreachable(pg)
+                self.addToTried(pg)
+
+    def wasNotPossibleToConnect(self, guard):
+        return guard._madeContact == False
+
+    def markAsUnreachable(self, guard):
+        guard._unreachableSince = simtime.now()
+                
+    def checkTriedTreshold(self, guards):
+        timeWindow = simtime.now() - self._params.GUARDS_TRY_TRESHOLD_TIME * 60
+        treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._consensus)
+        tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow ]
+        if len(tried) > treshold:
+            self._state = self._STATE_RETRY_ONLY\
+
+    def allHaveBeenTried(self):
+        return len([g for g in self._primaryGuards if not g._lastTried]) == 0
+
+    def transitionToPreviousStateOrTryUtopic(self):
+            if self._previousState:
+                self._state = self._previousState
+            else:
+                self._state = self.STATE_TRY_UTOPIC
 
     def end(self):
         self._hasFinished = True
 
+    def addToTried(self, guard):
+        self._triedGuards.append(guard)
 
     def _getLatestConsensus(self):
         return self._net.new_consensus()
@@ -830,19 +885,10 @@ class ChooseGuardAlgorithm(object):
             return list(remainingUtopic).pop(i)
 
 
-    def _updateGuardsWith(self, freshConsensus):
-        nodesInCurrentConsensus = set([g.node for g in self.guards])
-        # TODO: What to do if comes a new "fresh" guard in the consensus? Just add??
-        guardsUpdatedInFreshConsensus = set([Guard(n) for n in freshConsensus if n in nodesInCurrentConsensus])
-        self.guards.update(guardsUpdatedInFreshConsensus)
-
-
-    def _updatePrimaryGuards(self, usedGuards):
+    def _hasAnyPrimaryGuardBeenTriedIn(self, interval):
         for pg in self._primaryGuards:
-            if pg.isBad():
-                self._primaryGuards.remove(pg)
-                    
-        #TODO: not to use magic number, this should comes from config
-        toAdd = 3 - len(self._primaryGuards)
-        self._primaryGuards.extend(self._findPrimaryGuards(usedGuards, toAdd))
+            if not pg._lastTried: continue
+            if simtime.now() > pg._lastTried + interval * 60:
+                return True
 
+        return False

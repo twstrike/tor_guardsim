@@ -724,7 +724,7 @@ class Client(object):
         self.markGuard(guard, up)
 
         if up:
-            self._stats.addBandwidth(guard._node.bandwidth)
+            self._stats.addBandwidth(guard.node.bandwidth)
 
         return up
 
@@ -736,13 +736,13 @@ class Client(object):
             self._stats.incrementCircuitFailureCount()
             return False
 
-        #g = self.getGuard()
-        g = ChooseGuardAlgorithm(self._net, self._p)
-        initialState = g.start([], [], self._p.N_PRIMARY_GUARDS)
-        while True:
-            entryGuard = g.getNext(initialState)
-            if self.connectToGuard(g):
-                g.end()
+        g = self.getGuard()
+        algo = ChooseGuardAlgorithm(self._net, self._p)
+        initialState = algo.start([], [], self._p.N_PRIMARY_GUARDS)
+        while not algo.hasFinished:
+            entryGuard = algo.nextGuard(initialState)
+            #TODO: if circuite was built, then:
+            algo.end()
 
         if not g:
             return False
@@ -758,7 +758,13 @@ class ChooseGuardAlgorithm(object):
         self._params = params
 
 
+    @property
+    def hasFinished(self):
+        return self._hasFinished
+
+
     def start(self, usedGuards, excludeNodes, nPrimaryGuards, selectDirGuards = False):
+        self._hasFinished = False
         #ensure the used guards are ordered by priority
         usedGuards.sort(key = "priority", reverse = True)
 
@@ -776,15 +782,15 @@ class ChooseGuardAlgorithm(object):
         return self._state
 
 
-    def getNext(self, initialState):
+    def nextGuard(self, initialState):
         freshConsensus = self._getLatestConsensus()
         theresNewConsensus = sorted(freshConsensus) != sorted(self._consensus)
         if theresNewConsensus:
             self._updateGuardsWith(freshConsensus)
             self._updatePrimaryGuards(usedGuards)
 
-    def end():
-        pass
+    def end(self):
+        self._hasFinished = True
 
 
     def _getLatestConsensus(self):
@@ -820,7 +826,7 @@ class ChooseGuardAlgorithm(object):
                     return guard
         else:
             #TODO: should we weight by bandwidth here? Right now assumes is weighted.
-            i = random.randint(0, len(remainingUtopic))
+            i = random.randint(0, len(remainingUtopic) - 1)
             return list(remainingUtopic).pop(i)
 
 

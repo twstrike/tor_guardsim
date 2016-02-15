@@ -783,18 +783,33 @@ class StateTryUtopic(object):
         context.markAsUnreachableAndAddToTriedList(guards)
 
         context.checkTriedTreshold(context._triedGuards)
-        context.checkFailover(context._triedGuards, context._utopicGuards, context.STATE_TRY_DYSTOPIC)
-        context.removeUnavailableRemainingUtopicGuardsByBandwidth() 
+        context.checkFailover(context._triedGuards,
+                context._utopicGuards, context.STATE_TRY_DYSTOPIC)
 
-        # XXX Is this duplicate by mistake?
+        context.removeUnavailableRemainingUtopicGuards() 
+
+        # one more time
         context.checkTriedTreshold(context._triedGuards)
-        context.checkFailover(context._triedGuards, context._utopicGuards, context.STATE_TRY_DYSTOPIC)
+        context.checkFailover(context._triedGuards,
+                context._utopicGuards, context.STATE_TRY_DYSTOPIC)
 
 class StateTryDystopic(object):
 
     def next(self, context):
-        pass
+        context.moveOldTriedDystopicGuardsToRemainingList()
 
+        distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic() ]
+        guards = [g for g in distopicGuards if g not in context._primaryGuards]
+        context.markDystopicAsUnreachableAndAddToTriedList(guards)
+
+        context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
+        context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+
+        context.removeUnavailableRemainingDystopicGuards() 
+        
+        # one more time
+        context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
+        context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
 
 class ChooseGuardAlgorithm(object):
 
@@ -840,30 +855,42 @@ class ChooseGuardAlgorithm(object):
 
         return self._state.next(self)
 
-    def removeUnavailableRemainingUtopicGuardsByBandwidth(self):
+    def removeUnavailableRemainingUtopicGuards(self):
+        self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(
+                self._remainingUtopicGuards, self._triedGuards)
+
+    def removeUnavailableRemainingDystopicGuards(self):
+        self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(
+                self._remainingDystopicGuards, self._triedDystopicGuards)
+
+    def removeUnavailableRemainingAndMarkUnreachableAndAddToTried(self, remaining, tried):
         # XXX What is the difference of doing this by bandwidth if we are not
         # returning anything?
         # Does it make any difference if we are removing and marking in a different order?
-        guards = self._remainingUtopicGuards
+        guards = list(remaining) # makes a copy
         while len(guards) > 0:
             g = self.nextByBandwidth(guards)
             guards.remove(g)
 
             if self.markAsUnreachableAndRemoveAndAddToTriedList(g):
-                # XXX what guarantees it will be in triedGuards?
-                self._triedGuards.remove(g)
+                # XXX what guarantees it will be in tried?
+                tried.remove(g)
 
-    def markAsUnreachableAndRemoveAndAddToTriedList(self, guard, removeFrom=None):
+    def markAsUnreachableAndRemoveAndAddToTriedList(self, guard, triedList):
             if not self.wasNotPossibleToConnect(guard):
                 return None
 
             self.markAsUnreachable(guard)
-            self.addToTried(guard)
+            triedList.append(guard)
             return guard
 
     def markAsUnreachableAndAddToTriedList(self, guards):
         for pg in guards:
-            self.markAsUnreachableAndRemoveAndAddToTriedList(pg)
+            self.markAsUnreachableAndRemoveAndAddToTriedList(pg, self._triedGuards)
+
+    def markDystopicAsUnreachableAndAddToTriedList(self, guards):
+        for pg in guards:
+            self.markAsUnreachableAndRemoveAndAddToTriedList(pg, self._triedDystopicGuards)
 
     def wasNotPossibleToConnect(self, guard):
         return guard._madeContact == False
@@ -881,6 +908,18 @@ class ChooseGuardAlgorithm(object):
     def checkFailover(triedGuards, guards, nextState):
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * guards:
             self._state = nextState
+            return False
+
+        return True
+
+    def checkTriedDystopicFailoverAndMarkAllAsUnreachable(self):
+        if self.checkFailover(self._triedDystopicGuards,
+                self._dystopicGuards, self.STATE_ONLY_RETRY):
+            return True
+
+        guards = self._primaryGuards + self._triedGuards + self._triedDystopicGuards
+        for g in guards:
+            self.markAsUnreachable(g)
 
     def allHaveBeenTried(self):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
@@ -897,17 +936,20 @@ class ChooseGuardAlgorithm(object):
     def addToTried(self, guard):
         self._triedGuards.append(guard)
 
+    def giveOneMoreChanceTo(self, tried, remaining):
+        timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
+        guards = [g for g in tried if g._unreacheableSince]
+        for g in guards:
+            if g.unreacheableSince < timeWindow: remaining.append(g)
 
     def moveOldTriedGuardsToRemainingList(self):
-        timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
-        for g in self._triedGuards:
-            if g.unreacheableSince and g.unreacheableSince < timeWindow:
-                self._remainingUtopicGuards.append(g)
+        self.giveOneMoreChanceTo(self._triedGuards, self._remainingUtopicGuards)
 
+    def moveOldTriedDystopicGuardsToRemainingList(self):
+        self.giveOneMoreChanceTo(self._triedDystopicGuards, self._remainingDystopicGuards)
 
     def _getLatestConsensus(self):
         return self._net.new_consensus()
-
 
     def _getGuards(self, selectDirGuards, excludeNodes):
         guards = [n for n in self._consensus if n.V2flag] if selectDirGuards else self._consensus

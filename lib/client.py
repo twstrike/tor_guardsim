@@ -369,11 +369,6 @@ class Client(object):
             if circuit:
                 guardSelection.end(guard)
 
-                # Connect to the circuit
-                # This is the semantics of buildCircuit in this simulation
-                success = self.connectToGuard(guard)
-                self.entryGuardRegisterConnectStatus(guard, success)
-
                 # Copy used guards so it can be used in the next START
                 self._usedGuards = list(guardSelection._usedGuards)
                 return circuit # We want to break the loop
@@ -389,7 +384,18 @@ class Client(object):
         # Build the circuit data structure.
         # In the simulation we only require the guard to exists. No middle or
         # exit node.
-        return guard != None
+        if not guard: return None
+
+        # Connect to the circuit
+        # This is the semantics of buildCircuit in this simulation
+        success = self.connectToGuard(guard)
+        self.entryGuardRegisterConnectStatus(guard, success)
+
+        # XXX If this is buildCircuit, success = False means we failed to build
+        # the circuit, but we are not terminating the While, so it will never
+        # be reported
+
+        return success
 
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
         print("entryGuardRegisterConnectStatus: %s = %s" % (guard, succeeded))

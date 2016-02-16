@@ -728,9 +728,8 @@ class ChooseGuardAlgorithm(object):
             # If any PRIMARY_GUARDS have become bad, remove the guard from
             # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
             # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
-            if g._bad: continue
+            if not g or g._bad: continue
 
-            if not g: continue
             self._primaryGuards.append(g)
 
     def _nextPrimaryGuard(self, usedGuards, remainingUtopic):

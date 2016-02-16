@@ -758,17 +758,40 @@ class Client(object):
         algo = ChooseGuardAlgorithm(self._net, self._p)
         initialState = algo.start([], [], self._p.N_PRIMARY_GUARDS)
         while not algo.hasFinished:
-            entryGuard = algo.nextGuard(initialState)
+            entryGuard = algo.nextGuard()
             #TODO: if circuite was built, then:
-            algo.end()
+            algo.end(entryGuard)
 
         if not g:
             return False
         return self.connectToGuard(g)
 
 
-class StatePrimaryGuards(object):
+    def entryGuardRegisterConnectStatus(self, guard, succeeded):
+        now = simtime.now()
+        guard._lastTried = now
 
+        if succeeded:
+            if guard._unreachableSince:
+                guard._canRetry = False
+                guard._unreachableSince = None
+                guard._lastAttempted = now
+
+            # First contact made with this guard
+            if not guard._madeContact:
+                guard._madeContact = True
+        else:
+            if not guard._unreachableSince:
+                guard._unreachableSince = now
+                guard._lastAttempted = now 
+                guard._canRetry = False
+            elif guard._madeContact:
+                guard._canRetry = False
+                guard._lastAttempted = now
+
+
+class StatePrimaryGuards(object):
+    # XXX this is supposed to return a guard. How?
     def next(self, context):
         context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
@@ -777,9 +800,8 @@ class StatePrimaryGuards(object):
         if context.allHaveBeenTried():
             context.transitionToPreviousStateOrTryUtopic()
 
-
 class StateTryUtopic(object):
-
+    # XXX this is supposed to return a guard. How?
     def next(self, context):
         context.moveOldTriedGuardsToRemainingList()
 
@@ -798,7 +820,7 @@ class StateTryUtopic(object):
                 context._utopicGuards, context.STATE_TRY_DYSTOPIC)
 
 class StateTryDystopic(object):
-
+    # XXX this is supposed to return a guard. How?
     def next(self, context):
         context.moveOldTriedDystopicGuardsToRemainingList()
 
@@ -816,6 +838,7 @@ class StateTryDystopic(object):
         context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
 
 class StateRetryOnly(object):
+    # XXX this is supposed to return a guard. How?
     def next(self, context):
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key="_lastTried")
@@ -858,7 +881,7 @@ class ChooseGuardAlgorithm(object):
     def nextByBandwidth(self, guards):
         return tor.choose_node_by_bandwidth_weights(guards)
 
-    def nextGuard(self, initialState):
+    def nextGuard(self):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
             self._previousState = self._state
@@ -941,31 +964,10 @@ class ChooseGuardAlgorithm(object):
             else:
                 self._state = self.STATE_TRY_UTOPIC
 
-    def end(self):
+    def end(self, guard):
         # XXX Why?
         self._hasFinished = True
-
-    def entryGuardRegisterConnectStatus(self, guard, succeeded):
-        now = simtime.now()
-        self._lastTried = now
-
-        if succeeded:
-            if guard._unreachableSince:
-                guard._canRetry = False
-                guard._unreachableSince = None
-                guard._lastAttempted = now
-
-            # First contact made with this guard
-            if not guard._madeContact:
-                guard._madeContact = True
-        else:
-            if not guard._unreachableSince:
-                guard._unreachableSince = now
-                guard._lastAttempted = now 
-                guard._canRetry = False
-            elif guard._madeContact:
-                guard._canRetry = False
-                guard._lastAttempted = now
+        self._usedGuards.append(guard)
 
     def giveOneMoreChanceTo(self, tried, remaining):
         timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60

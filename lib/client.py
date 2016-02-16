@@ -315,37 +315,18 @@ class Client(object):
         # a ClientParams object
         self._p = parameters
 
+        self._stats = stats
+
         # used guards
         self._usedGuards = []
 
         self._consensus = None
 
-        ######################################
-
-        # lists of current guards in the consensus from the dystopic and
-        # utopic sets.  each guard is represented here as a torsim.Node.
-        self._DYSTOPIC_GUARDS = self._UTOPIC_GUARDS = None
-
-        # The Node.getID() results for every relay with the Guard flag from
-        # the most recent consensus.
-        self._ALL_GUARD_NODE_IDS = set()
-
         # The number of listed primary guards that we prioritise connecting to.
         self.NUM_PRIMARY_GUARDS = 3  # chosen by dice roll, guaranteed to be random
 
-        # lists of Guard objects for the dystopic and utopic guards
-        # configured on this client.
-        self._PRIMARY_DYS = []
-        self._PRIMARY_U = []
-
-        # Internal state for whether we think we're on a dystopic network
-        self._dystopic = False
-        self._networkAppearsDown = False
-
         # At bootstrap, we get a new consensus
         self.updateGuardLists()
-
-        self._stats = stats
 
     def updateGuardLists(self):
         """Called at start and when a new consensus should be made & received:
@@ -354,35 +335,6 @@ class Client(object):
         # We received a new consensus now, and use THIS until we receive a new
         # consensus
         self._consensus = list(self._net.new_consensus())
-
-        self._DYSTOPIC_GUARDS = []
-        self._UTOPIC_GUARDS = []
-
-        # XXXX I'm not sure what happens if a node changes its ORPort
-        # XXXX or when the client changes its policies.
-
-        # We get the latest consensus here.
-        for node in self._consensus:
-            self._ALL_GUARD_NODE_IDS.add(node.getID())
-
-            if node.seemsDystopic():
-                self._DYSTOPIC_GUARDS.append(node)
-                if not self._p.DISJOINT_SETS:
-                    self._UTOPIC_GUARDS.append(node)
-            else:
-                self._UTOPIC_GUARDS.append(node)
-
-        # Sort the lists from highest bandwidth to lowest.
-        self._UTOPIC_GUARDS.sort(cmp=compareNodeBandwidth, reverse=True)
-        self._DYSTOPIC_GUARDS.sort(cmp=compareNodeBandwidth, reverse=True)
-
-        # Now mark every Guard we have as listed or unlisted.
-        for lst in (self._PRIMARY_DYS, self._PRIMARY_U):
-            for g in lst:
-                if g.node.getID() in self._ALL_GUARD_NODE_IDS:
-                    g.markListed()
-                else:
-                    g.markUnlisted()
 
     def markGuard(self, guard, up):
         guard.mark(up)

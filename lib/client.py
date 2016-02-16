@@ -434,17 +434,19 @@ def returnEachEntryInTurn(guards, turn):
 
     return (g, turn)
 
+
+# XXX Maybe this is what it means
+def returnEachEntryInTurnImNotSure(guards, context):
+    for g in guards:
+        # XXX this is not clear in the spec
+        if not context.wasNotPossibleToConnect(g):
+            return g
+        else:
+            print("Skip %s because it failed before" % g)
+
 class StatePrimaryGuards(object):
     def __init__(self):
         self._turn = -1
-
-    def returnEachEntryInTurnImNotSure(self, guards):
-        for g in guards:
-            # XXX this is not clear in the spec
-            if not context.wasNotPossibleToConnect(g):
-                return g
-            else:
-                print("Skip %s because it failed before" % g)
 
     def next(self, context):
         print("StatePrimaryGuards - NEXT")

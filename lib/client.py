@@ -335,7 +335,15 @@ class Client(object):
         # We received a new consensus now, and use THIS until we receive a new
         # consensus
         self._consensus = list(self._net.new_consensus())
+    
+        # From proposal:
+        # If any PRIMARY_GUARDS have become bad, remove the guard from
+        # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
+        # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
 
+        # XXX PRIMARY_GUARD is something internal to the state machine.
+        # How are we supposed to change it when we receive a new consensus?
+    
     def markGuard(self, guard, up):
         guard.mark(up)
 

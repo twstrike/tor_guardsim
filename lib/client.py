@@ -559,22 +559,21 @@ class Client(object):
     def markGuard(self, guard, up):
         guard.mark(up)
 
-        # If a utopic guard is up, and we previously thought we were in a
-        # dystopia, then we must have left the dystopia.
-        if up:
-            if self.networkAppearsDown:
-                self.networkAppearsDown = False
+    def probeGuard(self, guard):
+        """If it's up on the network, mark it up.
+           With each try, update the failover threshold
+           Return true on success, false on failure."""
+        up = self._net.probe_node_is_up(guard.node)
+        self.markGuard(guard, up)
 
-            if not guard.node.seemsDystopic() and self.inADystopia:
-                print("A utopic guard suddenly worked while we thought we were "
-                      "in a dystopia...")
-                self.inAUtopia = True
+        self._stats.addExposedTo(guard, simtime.now())
+
+        return up
 
     def connectToGuard(self, guard):
         """Try to connect to 'guard' -- if it's up on the network, mark it up.
            Return true on success, false on failure."""
-        up = self._net.probe_node_is_up(guard.node)
-        self.markGuard(guard, up)
+        up = self.probeGuard(guard)
 
         if up:
             self._stats.addBandwidth(guard.node.bandwidth)
@@ -637,7 +636,6 @@ class StatePrimaryGuards(object):
     def __init__(self):
         self._index = -1
 
-    # XXX this is supposed to return a guard. How?
     def next(self, context):
         print("StatePrimaryGuards - NEXT")
         print("  len = %d, index = %d" % (len(context._primaryGuards), self._index))

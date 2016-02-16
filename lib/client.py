@@ -471,11 +471,6 @@ class StatePrimaryGuards(object):
         else:
             print("StatePrimaryGuards - ran out of primary")
 
-            # XXX Return what? Should I consider all have been tried?
-            # This is not what tried means.
-            for g in context._primaryGuards:
-                print("- tried: %s, %s" % (g, g._lastTried))
-
         context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
         if not context.checkTriedTreshold(context._triedGuards):
@@ -485,14 +480,22 @@ class StatePrimaryGuards(object):
             context.transitionToPreviousStateOrTryUtopic()
 
 class StateTryUtopic(object):
-    # XXX this is supposed to return a guard. How?
+    def __init__(self):
+        self._index = -1
+
     def next(self, context):
-        # ???
-        context._lastReturn = None
+        print("StateTryUtopic - NEXT")
 
         context.moveOldTriedGuardsToRemainingList()
-
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
+
+        print("  len = %d, index = %d" % (len(guards), self._index))
+        if len(guards)-1 > self._index:
+            self._index += 1
+            context._lastReturn = guards[self._index]
+        else:
+            print("StateTryUtopic - ran out of guards")
+
         context.markAsUnreachableAndAddToTriedList(guards)
 
         if not context.checkTriedTreshold(context._triedGuards):
@@ -724,7 +727,6 @@ class ChooseGuardAlgorithm(object):
             i = random.randint(0, len(remainingUtopic) - 1)
             return list(remainingUtopic).pop(i)
 
-
     def _hasAnyPrimaryGuardBeenTriedIn(self, interval):
         for pg in self._primaryGuards:
             if not pg._lastTried: continue
@@ -732,3 +734,4 @@ class ChooseGuardAlgorithm(object):
                 return True
 
         return False
+

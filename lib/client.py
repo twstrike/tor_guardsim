@@ -76,24 +76,6 @@ class ClientParams(object):
                  RETRY_MULT=2,
                  PRIORITIZE_BANDWIDTH=True,
                  DISJOINT_SETS=False):
-        # ...within this many simulated seconds, then "freak out".
-        self.TOO_RECENTLY = TOO_RECENTLY
-
-        # wait this long after retrying guards the first time
-        self.RETRY_DELAY = RETRY_DELAY
-        # wait this much longer (factor) after the first time.
-        self.RETRY_MULT = RETRY_MULT
-
-        # prop259: percentage of guards to keep in a guard list (utopic)
-        self.UTOPIC_GUARDS_THRESHOLD = 0.005
-        # prop259: percentage of guards to keep in a guard list (dystopic)
-        self.DYSTOPIC_GUARDS_THRESHOLD = 0.005
-        # [prop259] Percentage of UTOPIC_GUARDS we try before also trying
-        # the DYSTOPIC_GUARDS.
-        self.UTOPIC_GUARDLIST_FAILOVER_THRESHOLD = 0.75
-        # [prop259] Percentage of DYSTOPIC_GUARDS we try before concluding
-        # that the network is down.
-        self.DYSTOPIC_GUARDLIST_FAILOVER_THRESHOLD = 1.00
 
         # From asn's post and prop259.  This should be a consensus parameter.
         # It stores the number of guards in {U,DYS}TOPIC_GUARDLIST which we
@@ -103,12 +85,7 @@ class ClientParams(object):
         # nodes' measured bandwidth as listed in the most recent consensus.
         self.N_PRIMARY_GUARDS = 3
 
-        # If True, select higher bandwidth guards (rather than random ones) when
-        # choosing a new guard.
-        self.PRIORITIZE_BANDWIDTH = PRIORITIZE_BANDWIDTH
-
-        # If True, UTOPIC_GUARDS and DISTOPIC_GUARDS are disjoint
-        self.DISJOINT_SETS = DISJOINT_SETS
+        self.GUARDS_RETRY_TIME = 20
 
         # Time (in minutes) since we tried any of the primary guards
         self.PRIMARY_GUARDS_RETRY_INTERVAL = 3
@@ -119,6 +96,7 @@ class ClientParams(object):
         # Percentage of total guards in the latest consensus we want to try in GUARDS_TRY_TRESHOLD_TIME minutes
         self.GUARDS_TRY_TRESHOLD = 0.03
 
+        self.GUARDS_FAILOVER_THRESHOLD = 0.02
 
 class Guard(object):
     """Represents what a client knows about a guard."""

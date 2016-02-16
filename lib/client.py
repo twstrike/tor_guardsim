@@ -142,6 +142,9 @@ class Guard(object):
         # The timestamp of the last time it tried to connecto to this node.
         self._lastTried = None
 
+        # True iff the guard is not in the latest consensus
+        self._bad = None
+
         ############################
         # --- From entry_guard_t ---#
         ############################
@@ -335,15 +338,11 @@ class Client(object):
         # We received a new consensus now, and use THIS until we receive a new
         # consensus
         self._consensus = list(self._net.new_consensus())
-    
-        # From proposal:
-        # If any PRIMARY_GUARDS have become bad, remove the guard from
-        # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
-        # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
 
-        # XXX PRIMARY_GUARD is something internal to the state machine.
-        # How are we supposed to change it when we receive a new consensus?
-    
+        # Update BAD status for usedGuards
+        for g in self._usedGuards:
+            g._bad = g._node not in self._consensus
+ 
     def markGuard(self, guard, up):
         guard.mark(up)
 
@@ -724,6 +723,13 @@ class ChooseGuardAlgorithm(object):
         used = list(usedGuards)
         while len(self._primaryGuards) < nPrimaryGuards:
             g = self._nextPrimaryGuard(used, remainingUtopic)
+
+            # From proposal:
+            # If any PRIMARY_GUARDS have become bad, remove the guard from
+            # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
+            # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
+            if g._bad: continue
+
             if not g: continue
             self._primaryGuards.append(g)
 
@@ -731,6 +737,7 @@ class ChooseGuardAlgorithm(object):
         if usedGuards:
             while usedGuards:
                 guard = usedGuards.pop(0)
+
                 #TODO: What if is a bad guard? whatcha gonna do?
                 if guard not in self._primaryGuards and guard._node in self._consensus:
                     return guard

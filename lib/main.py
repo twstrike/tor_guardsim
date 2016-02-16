@@ -52,8 +52,8 @@ def trivialSimulation(args):
     numTriedGuards = 0
     timeUntilFirstCircuit = 0
 
-    for period in xrange(30): # one hour each
-        for subperiod in xrange(30): # two minutes each
+    for period in xrange(30):  # one hour each
+        for subperiod in xrange(30):  # two minutes each
             if (subperiod % 10) == 0:
                 # nodes left and arrived
                 net.do_churn()
@@ -62,7 +62,7 @@ def trivialSimulation(args):
 
             cc = gc()
 
-            for attempts in xrange(6): # 20 sec each
+            for attempts in xrange(6):  # 20 sec each
 
                 # actually have the client act.
                 if cc.buildCircuit():
@@ -89,13 +89,14 @@ def trivialSimulation(args):
 
     # This does not make sense with -C
     print("Exposure to guard over time (1, 15, 30) hours:   %s, %s, %s"
-          % (stats.guardsExposureAfter(60*60),
-          stats.guardsExposureAfter(15*60*60),
-          stats.guardsExposureAfter(30*60*60))
+          % (stats.guardsExposureAfter(60 * 60),
+             stats.guardsExposureAfter(15 * 60 * 60),
+             stats.guardsExposureAfter(30 * 60 * 60))
           )
 
     print("Number of guards we tried before succeeding first circuit:   %d" % numTriedGuards)
     print("Time until the first circuit is built:   %d" % timeUntilFirstCircuit)
+
 
 if __name__ == '__main__':
     args = options.makeOptionsParser()

@@ -57,11 +57,11 @@ class Client(object):
                 guard = client.Guard(node)
                 self._ALL_GUARDS.append(guard)
 
-            guard.markListed() # by defition listed is in the latest consensus
+            guard.markListed()  # by defition listed is in the latest consensus
 
         # Whatever is not in the consensus, we dont know about
         # See nodelist_set_consensus()
-        for guard in [ g for g in self._GUARD_LIST if not g._listed]:
+        for guard in [g for g in self._GUARD_LIST if not g._listed]:
             g._node._isRunning = False
 
     def entryGuardsComputeStatus(self):
@@ -79,7 +79,7 @@ class Client(object):
                 guard._badSince = simtime.now()
 
     def removeDeadEntryGuards(self):
-        entryGuardRemoveAfter = 30*24*60*60
+        entryGuardRemoveAfter = 30 * 24 * 60 * 60
 
         toRemove = []
         for guard in self._GUARD_LIST:
@@ -90,7 +90,7 @@ class Client(object):
         self._GUARD_LIST = [guard for guard in self._GUARD_LIST if guard not in toRemove]
 
     def removeObsoleteEntryGuards(self):
-        guardLifetime = 86400 * 30 # one month, is the minimum
+        guardLifetime = 86400 * 30  # one month, is the minimum
 
         toRemove = []
         for guard in self._GUARD_LIST:
@@ -100,56 +100,57 @@ class Client(object):
         self._GUARD_LIST = [guard for guard in self._GUARD_LIST if guard not in toRemove]
 
     def pickEntryGuards(self, forDirectory):
-	numNeeded = self.decideNumGuards(forDirectory)
+        numNeeded = self.decideNumGuards(forDirectory)
         while self.numLiveEntryGuards(forDirectory) < numNeeded:
-	    if not self.addAnEntryGuard(forDirectory): break
+            if not self.addAnEntryGuard(forDirectory): break
 
     def numLiveEntryGuards(self, forDirectory):
-	live = [g for g in self._GUARD_LIST if not (forDirectory and not g._isDirectoryCache) and tor.entry_is_live(g) ]
-	return len(live)
+        live = [g for g in self._GUARD_LIST if not (forDirectory and not g._isDirectoryCache) and tor.entry_is_live(g)]
+        return len(live)
 
     def addAnEntryGuard(self, forDirectory):
-	g = None
+        g = None
 
-	if not forDirectory:
-	    g = self.chooseGoodEntryServer()
-	else:
-	    g = self.routerPickDirectoryServer()
+        if not forDirectory:
+            g = self.chooseGoodEntryServer()
+        else:
+            g = self.routerPickDirectoryServer()
 
-	if not g: return None
+        if not g: return None
 
-	# Dont add what it already in the list.
-	if g in self._GUARD_LIST: return None
+        # Dont add what it already in the list.
+        if g in self._GUARD_LIST: return None
 
         print("Adding %s to GUARD_LIST" % g)
         self._GUARD_LIST.append(g)
 
-	now = simtime.now()
-	g._addedAt = random.randint(now - 3600*24*30, now-1)
+        now = simtime.now()
+        g._addedAt = random.randint(now - 3600 * 24 * 30, now - 1)
 
-        assert(tor.entry_is_live(g))
+        assert (tor.entry_is_live(g))
 
-	return g
+        return g
 
     def routerPickDirectoryServer(self):
-        guards = [g for g in self._ALL_GUARDS if g not in self._GUARD_LIST and g._node._isRunning and g._isDirectoryCache]
-	g = random.choice(guards)
+        guards = [g for g in self._ALL_GUARDS if
+                  g not in self._GUARD_LIST and g._node._isRunning and g._isDirectoryCache]
+        g = random.choice(guards)
 
-	# XXX should we simulate the busy behaviot here?
-	# if g._isBusy: return None
+        # XXX should we simulate the busy behaviot here?
+        # if g._isBusy: return None
         return g
 
     def chooseGoodEntryServer(self):
         allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]
         guard = tor.choose_node_by_bandwidth_weights(allButCurrent)
-	return guard
+        return guard
 
     def populateLiveEntryGuards(self, forDirectory):
-	numNeeded = self.decideNumGuards(forDirectory)
+        numNeeded = self.decideNumGuards(forDirectory)
 
         liveEntryGuards = []
         for guard in self._GUARD_LIST:
-	    if forDirectory and not guard._isDirectoryCache: continue
+            if forDirectory and not guard._isDirectoryCache: continue
             if not tor.entry_is_live(guard): continue
 
             liveEntryGuards.append(guard)
@@ -160,16 +161,16 @@ class Client(object):
         return (liveEntryGuards, False)
 
     def getGuard(self):
-	return self.chooseRandomEntryImpl(False)
+        return self.chooseRandomEntryImpl(False)
 
     def decideNumGuards(self, forDirectory):
         # After bootstrap, Tor requires only 1 guard
-	if forDirectory: return 3
-	return 1
+        if forDirectory: return 3
+        return 1
 
     def chooseRandomEntryImpl(self, forDirectory):
         # ensure we have something to populate from
-        self.pickEntryGuards(forDirectory) 
+        self.pickEntryGuards(forDirectory)
         liveEntryGuards, shouldChoose = self.populateLiveEntryGuards(forDirectory)
 
         if shouldChoose:
@@ -211,7 +212,7 @@ class Client(object):
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
         g = self.getGuard()
-        assert(g)
+        assert (g)
 
         succeeded = self.connectToGuard(g)
         willRetryPreviousGuards = self.entryGuardRegisterConnectStatus(g, succeeded)
@@ -235,7 +236,7 @@ class Client(object):
         if succeeded:
             if guard._unreachableSince:
                 guard._canRetry = False
-                guard._unreachableSince = None # should it be 0?
+                guard._unreachableSince = None  # should it be 0?
                 guard._lastAttempted = now
 
             # First contact made with this guard
@@ -249,10 +250,10 @@ class Client(object):
         else:
             if not guard._madeContact:
                 print("Remove guard we never made contact with %s" % guard)
-                self._GUARD_LIST = [g for g in self._GUARD_LIST if g != guard ]
+                self._GUARD_LIST = [g for g in self._GUARD_LIST if g != guard]
             elif not guard._unreachableSince:
                 guard._unreachableSince = now
-                guard._lastAttempted = now 
+                guard._lastAttempted = now
                 guard._canRetry = False
             else:
                 # We might neet to introduce can_retry
@@ -277,5 +278,3 @@ class Client(object):
                 willRetryGuards = True
 
         return willRetryGuards
-
-

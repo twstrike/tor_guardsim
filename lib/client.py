@@ -69,6 +69,7 @@ class ClientParams(object):
     """Represents the configuration parameters of the client algorithm, as given
     in proposal 259.
     """
+
     def __init__(self,
                  TOO_RECENTLY=86400,
                  RETRY_DELAY=30,
@@ -109,7 +110,7 @@ class ClientParams(object):
         # If True, UTOPIC_GUARDS and DISTOPIC_GUARDS are disjoint
         self.DISJOINT_SETS = DISJOINT_SETS
 
-        #Time (in minutes) since we tried any of the primary guards
+        # Time (in minutes) since we tried any of the primary guards
         self.PRIMARY_GUARDS_RETRY_INTERVAL = 3
 
         # Time (in minutes)
@@ -142,7 +143,7 @@ class Guard(object):
         self._lastTried = None
 
         ############################
-        #--- From entry_guard_t ---#
+        # --- From entry_guard_t ---#
         ############################
 
         # When did we add it (simulated)?
@@ -249,6 +250,7 @@ class Guard(object):
     def isBad(self):
         return self.isListed() or not self.isUp()
 
+
 class Stats(object):
     """Contains information about the stats of several runs over potentially
     different clients."""
@@ -263,7 +265,7 @@ class Stats(object):
         self._EXPOSURE_AT = {}
 
     def addExposedTo(self, guard, when):
-	if guard not in self._EXPOSED_TO_GUARDS:
+        if guard not in self._EXPOSED_TO_GUARDS:
             self._EXPOSED_TO_GUARDS.append(guard)
 
         exp = self._EXPOSURE_AT[when] = len(self._EXPOSED_TO_GUARDS)
@@ -300,6 +302,7 @@ class Stats(object):
             if t >= time: break
 
         return exposure
+
 
 class Client(object):
     """A stateful client implementation of the guard selection algorithm."""
@@ -420,7 +423,7 @@ class Client(object):
                 success = self.connectToGuard(guard)
                 self.entryGuardRegisterConnectStatus(guard, success)
 
-                return circuit # We want to break the loop
+                return circuit  # We want to break the loop
             else:
                 # XXX are we supposed to keep trying forever?
                 # What guarantees we will find something?
@@ -451,11 +454,12 @@ class Client(object):
         else:
             if not guard._unreachableSince:
                 guard._unreachableSince = now
-                guard._lastAttempted = now 
+                guard._lastAttempted = now
                 guard._canRetry = False
             elif guard._madeContact:
                 guard._canRetry = False
                 guard._lastAttempted = now
+
 
 class StatePrimaryGuards(object):
     def __init__(self):
@@ -465,7 +469,7 @@ class StatePrimaryGuards(object):
         print("StatePrimaryGuards - NEXT")
         print("  len = %d, index = %d" % (len(context._primaryGuards), self._index))
 
-        if len(context._primaryGuards)-1 > self._index:
+        if len(context._primaryGuards) - 1 > self._index:
             self._index += 1
             context._lastReturn = context._primaryGuards[self._index]
         else:
@@ -479,6 +483,7 @@ class StatePrimaryGuards(object):
         if context.allHaveBeenTried():
             context.transitionToPreviousStateOrTryUtopic()
 
+
 class StateTryUtopic(object):
     def __init__(self):
         self._index = -1
@@ -490,7 +495,7 @@ class StateTryUtopic(object):
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
 
         print("  len = %d, index = %d" % (len(guards), self._index))
-        if len(guards)-1 > self._index:
+        if len(guards) - 1 > self._index:
             self._index += 1
             context._lastReturn = guards[self._index]
         else:
@@ -502,25 +507,26 @@ class StateTryUtopic(object):
             return
 
         if not context.checkFailover(context._triedGuards,
-                context._utopicGuards, context.STATE_TRY_DYSTOPIC):
+                                     context._utopicGuards, context.STATE_TRY_DYSTOPIC):
             return
 
-        context.removeUnavailableRemainingUtopicGuards() 
+        context.removeUnavailableRemainingUtopicGuards()
 
         # one more time
         if not context.checkTriedTreshold(context._triedGuards):
             return
 
         if not context.checkFailover(context._triedGuards,
-                context._utopicGuards, context.STATE_TRY_DYSTOPIC):
+                                     context._utopicGuards, context.STATE_TRY_DYSTOPIC):
             return
+
 
 class StateTryDystopic(object):
     # XXX this is supposed to return a guard. How?
     def next(self, context):
         context.moveOldTriedDystopicGuardsToRemainingList()
 
-        distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic() ]
+        distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic()]
         guards = [g for g in distopicGuards if g not in context._primaryGuards]
         context.markDystopicAsUnreachableAndAddToTriedList(guards)
 
@@ -530,14 +536,15 @@ class StateTryDystopic(object):
         if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
 
-        context.removeUnavailableRemainingDystopicGuards() 
-        
+        context.removeUnavailableRemainingDystopicGuards()
+
         # one more time
         if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards):
             return
 
         if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
+
 
 class StateRetryOnly(object):
     # XXX this is supposed to return a guard. How?
@@ -548,6 +555,7 @@ class StateRetryOnly(object):
         for g in guards:
             if context.wasNotPossibleToConnect(g):
                 context.markAsUnreachable(g)
+
 
 class ChooseGuardAlgorithm(object):
     def __init__(self, net, params):
@@ -564,7 +572,7 @@ class ChooseGuardAlgorithm(object):
     def hasFinished(self):
         return self._hasFinished
 
-    def start(self, usedGuards, excludeNodes, nPrimaryGuards, selectDirGuards = False):
+    def start(self, usedGuards, excludeNodes, nPrimaryGuards, selectDirGuards=False):
         self._hasFinished = False
         self._usedGuards = usedGuards
 
@@ -597,17 +605,17 @@ class ChooseGuardAlgorithm(object):
 
     def removeUnavailableRemainingUtopicGuards(self):
         self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(
-                self._remainingUtopicGuards, self._triedGuards)
+            self._remainingUtopicGuards, self._triedGuards)
 
     def removeUnavailableRemainingDystopicGuards(self):
         self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(
-                self._remainingDystopicGuards, self._triedDystopicGuards)
+            self._remainingDystopicGuards, self._triedDystopicGuards)
 
     def removeUnavailableRemainingAndMarkUnreachableAndAddToTried(self, remaining, tried):
         # XXX What is the difference of doing this by bandwidth if we are not
         # returning anything?
         # Does it make any difference if we are removing and marking in a different order?
-        guards = list(remaining) # makes a copy
+        guards = list(remaining)  # makes a copy
         while len(guards) > 0:
             g = self.nextByBandwidth(guards)
             guards.remove(g)
@@ -617,12 +625,12 @@ class ChooseGuardAlgorithm(object):
                 tried.remove(g)
 
     def markAsUnreachableAndRemoveAndAddToTriedList(self, guard, triedList):
-            if not self.wasNotPossibleToConnect(guard):
-                return None
+        if not self.wasNotPossibleToConnect(guard):
+            return None
 
-            self.markAsUnreachable(guard)
-            triedList.append(guard)
-            return guard
+        self.markAsUnreachable(guard)
+        triedList.append(guard)
+        return guard
 
     def markAsUnreachableAndAddToTriedList(self, guards):
         for pg in guards:
@@ -637,12 +645,12 @@ class ChooseGuardAlgorithm(object):
 
     def markAsUnreachable(self, guard):
         guard._unreachableSince = simtime.now()
-                
+
     # XXX should we abort the current state if this transitions to another state?
     def checkTriedTreshold(self, guards):
         timeWindow = simtime.now() - self._params.GUARDS_TRY_TRESHOLD_TIME * 60
         treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._consensus)
-        tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow ]
+        tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
         if len(tried) > treshold:
             self._state = self._STATE_RETRY_ONLY
             return False
@@ -659,7 +667,7 @@ class ChooseGuardAlgorithm(object):
 
     def checkTriedDystopicFailoverAndMarkAllAsUnreachable(self):
         if self.checkFailover(self._triedDystopicGuards,
-                self._dystopicGuards, self.STATE_ONLY_RETRY):
+                              self._dystopicGuards, self.STATE_ONLY_RETRY):
             return True
 
         guards = self._primaryGuards + self._triedGuards + self._triedDystopicGuards
@@ -670,10 +678,10 @@ class ChooseGuardAlgorithm(object):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
 
     def transitionToPreviousStateOrTryUtopic(self):
-            if self._previousState:
-                self._state = self._previousState
-            else:
-                self._state = self.STATE_TRY_UTOPIC
+        if self._previousState:
+            self._state = self._previousState
+        else:
+            self._state = self.STATE_TRY_UTOPIC
 
     def end(self, guard):
         # XXX Why?
@@ -700,30 +708,27 @@ class ChooseGuardAlgorithm(object):
         guardsLessExclusions = set(guards) - excludeNodes
         return set([Guard(n) for n in guardsLessExclusions])
 
-
     def _filterDystopicGuardsFrom(self, guards):
         return set([dg for dg in guards if dg.node.seemsDystopic()])
 
-
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
-        #This is not taking into account the remaining dystopic guards. Is that okay?
+        # This is not taking into account the remaining dystopic guards. Is that okay?
         primaryGuards = []
         while len(primaryGuards) < nPrimaryGuards:
             primaryGuards.append(self._nextPrimaryGuard(usedGuards, remainingUtopic))
 
         return primaryGuards
 
-
     def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
         if usedGuards:
             used = list(usedGuards)
             while used:
                 guard = used.pop(0)
-                #TODO: What if is a bad guard? whatcha gonna do?
+                # TODO: What if is a bad guard? whatcha gonna do?
                 if guard not in self._primary_guards and guard in self._consensus:
                     return guard
         else:
-            #TODO: should we weight by bandwidth here? Right now assumes is weighted.
+            # TODO: should we weight by bandwidth here? Right now assumes is weighted.
             i = random.randint(0, len(remainingUtopic) - 1)
             return list(remainingUtopic).pop(i)
 
@@ -734,4 +739,3 @@ class ChooseGuardAlgorithm(object):
                 return True
 
         return False
-

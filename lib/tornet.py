@@ -219,6 +219,12 @@ class Network(object):
     def probe_node_is_up(self, node):
         """Called when a simulated client is trying to connect to 'node'.
            Returns true iff the connection succeeds."""
+
+        # It takes some time to connect. Not adding this is unfair with the
+        # original algorithm which seems to make less connections attempts than
+        # the proposal
+        simtime.advanceTime(2)
+
         return node.isReallyUp()
 
 

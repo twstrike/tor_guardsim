@@ -97,6 +97,7 @@ def trivialSimulation(args):
     print("Number of guards we tried before succeeding first circuit:   %d" % numTriedGuards)
     print("Time until the first circuit is built:   %d" % timeUntilFirstCircuit)
 
+    print("Total simulation time:    %d" % simtime.now())
 
 if __name__ == '__main__':
     args = options.makeOptionsParser()

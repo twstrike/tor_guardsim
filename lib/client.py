@@ -360,9 +360,15 @@ class Client(object):
 
         # XXX it means we keep trying different guards until we succeed to build
         # a circuit (even if the circuit failed by other reasons)
+        tries = 0
         while True:
             # XXX will it ALWAYS succeed at returning something?
             guard = guardSelection.nextGuard()
+            tries += 1
+
+            if tries % 100:
+                print("We tried 100 without success")
+                print("  guard is %s" % guard)
 
             # XXX this is "circuit = buildCircuitWith(entryGuard)"
             circuit = self.buildCircuitWith(guard)

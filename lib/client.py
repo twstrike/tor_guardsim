@@ -678,9 +678,9 @@ class ChooseGuardAlgorithm(object):
 
     def giveOneMoreChanceTo(self, tried, remaining):
         timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
-        guards = [g for g in tried if g._unreacheableSince]
+        guards = [g for g in tried if g._unreachableSince]
         for g in guards:
-            if g.unreacheableSince < timeWindow: remaining.append(g)
+            if g._unreachableSince < timeWindow: remaining.append(g)
 
     def moveOldTriedGuardsToRemainingList(self):
         self.giveOneMoreChanceTo(self._triedGuards, self._remainingUtopicGuards)

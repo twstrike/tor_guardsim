@@ -708,15 +708,15 @@ class StateRetryOnly(object):
                 context.markAsUnreachable(g)
 
 class ChooseGuardAlgorithm(object):
-    STATE_PRIMARY_GUARDS = StatePrimaryGuards()
-    STATE_TRY_UTOPIC = StateTryUtopic()
-    STATE_TRY_DYSTOPIC = StateTryDystopic()
-    STATE_RETRY_ONLY = StateRetryOnly()
-
     def __init__(self, net, params):
         self._net = net
         self._params = params
         self._lastReturn = None
+
+        self.STATE_PRIMARY_GUARDS = StatePrimaryGuards()
+        self.STATE_TRY_UTOPIC = StateTryUtopic()
+        self.STATE_TRY_DYSTOPIC = StateTryDystopic()
+        self.STATE_RETRY_ONLY = StateRetryOnly()
 
     @property
     def hasFinished(self):

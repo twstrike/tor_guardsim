@@ -404,22 +404,36 @@ class Client(object):
         # XXX we should save used_guards and pass as parameter
         state = guardSelection.start([], [], self._p.N_PRIMARY_GUARDS)
 
+        # XXX it means we keep trying different guards until we succeed to build
+        # a circuit (even if the circuit failed by other reasons)
         while True:
             # XXX will it ALWAYS succeed at returning something?
             guard = guardSelection.nextGuard()
 
             # XXX this is "circuit = buildCircuitWith(entryGuard)"
-            success = self.connectToGuard(guard)
-            self.entryGuardRegisterConnectStatus(guard, success)
-
-            if success:
+            circuit = self.buildCircuitWith(guard)
+            if circuit:
                 guardSelection.end(guard)
-                return True # or the guard, whatever
+
+                # Connect to the circuit
+                # This is the semantics of buildCircuit in this simulation
+                success = self.connectToGuard(guard)
+                self.entryGuardRegisterConnectStatus(guard, success)
+
+                return circuit # We want to break the loop
             else:
                 # XXX are we supposed to keep trying forever?
                 # What guarantees we will find something?
                 # return False
                 pass
+
+    # XXX What is this supposed to do? Build the circuit data structure, OR 
+    # connect to the circuit?
+    def buildCircuitWith(self, guard):
+        # Build the circuit data structure.
+        # In the simulation we only require the guard to exists. No middle or
+        # exit node.
+        return guard != None
 
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
         now = simtime.now()
@@ -464,7 +478,7 @@ class StatePrimaryGuards(object):
 
         context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
-        if not context.checkTriedTreshold(context._triedGuards)
+        if not context.checkTriedTreshold(context._triedGuards):
             return
 
         if context.allHaveBeenTried():
@@ -473,26 +487,29 @@ class StatePrimaryGuards(object):
 class StateTryUtopic(object):
     # XXX this is supposed to return a guard. How?
     def next(self, context):
+        # ???
+        context._lastReturn = None
+
         context.moveOldTriedGuardsToRemainingList()
 
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
         context.markAsUnreachableAndAddToTriedList(guards)
 
-        if not context.checkTriedTreshold(context._triedGuards)
+        if not context.checkTriedTreshold(context._triedGuards):
             return
 
         if not context.checkFailover(context._triedGuards,
-                context._utopicGuards, context.STATE_TRY_DYSTOPIC)
+                context._utopicGuards, context.STATE_TRY_DYSTOPIC):
             return
 
         context.removeUnavailableRemainingUtopicGuards() 
 
         # one more time
-        if not context.checkTriedTreshold(context._triedGuards)
+        if not context.checkTriedTreshold(context._triedGuards):
             return
 
         if not context.checkFailover(context._triedGuards,
-                context._utopicGuards, context.STATE_TRY_DYSTOPIC)
+                context._utopicGuards, context.STATE_TRY_DYSTOPIC):
             return
 
 class StateTryDystopic(object):
@@ -504,19 +521,19 @@ class StateTryDystopic(object):
         guards = [g for g in distopicGuards if g not in context._primaryGuards]
         context.markDystopicAsUnreachableAndAddToTriedList(guards)
 
-        if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
+        if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards):
             return
 
-        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
 
         context.removeUnavailableRemainingDystopicGuards() 
         
         # one more time
-        if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
+        if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards):
             return
 
-        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
 
 class StateRetryOnly(object):

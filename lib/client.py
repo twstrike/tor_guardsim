@@ -312,6 +312,8 @@ class Client(object):
         # a ClientParams object
         self._p = parameters
 
+        self._GUARD_SELECTION = ChooseGuardAlgorithm(self._net, self._p)
+
         # lists of current guards in the consensus from the dystopic and
         # utopic sets.  each guard is represented here as a torsim.Node.
         self._DYSTOPIC_GUARDS = self._UTOPIC_GUARDS = None
@@ -748,24 +750,27 @@ class Client(object):
 
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
-        self.maybeCheckNetwork()
 
-        if self.networkAppearsDown:
-            self._stats.incrementCircuitFailureCount()
-            return False
+        # XXX we should save used_guards and pass as parameter
+        state = self._GUARD_SELECTION.start([], [], self._p.N_PRIMARY_GUARDS)
 
-        g = self.getGuard()
-        algo = ChooseGuardAlgorithm(self._net, self._p)
-        initialState = algo.start([], [], self._p.N_PRIMARY_GUARDS)
-        while not algo.hasFinished:
-            entryGuard = algo.nextGuard()
-            #TODO: if circuite was built, then:
-            algo.end(entryGuard)
+        # XXX are we supposed to keep trying forever?
+        # What guarantees we will find something?
+        while True:
+            # XXX will it ALWAYS succeed at returning something?
+            guard = self._GUARD_SELECTION.nextGuard()
 
-        if not g:
-            return False
-        return self.connectToGuard(g)
+            success = self.connectToGuard(guard)
+            self.entryGuardsComputeStatus(guard, success)
 
+            if success:
+                self._GUARD_SELECTION.end(guard)
+                return True # or the guard, whatever
+            else:
+                # XXX are we supposed to keep trying forever?
+                # What guarantees we will find something?
+                # return False
+                pass
 
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
         now = simtime.now()

@@ -165,7 +165,11 @@ class Guard(object):
         # The time at which we first noticed we could not connect to this node
         self._unreachableSince = None
 
-        # The time at which we failed to connect to this node
+        # None if we can connect to this guard, or the time at which we last
+        # failed to connect to this node
+        # XXX: I guess this description (from tor) is incorrect, since we mark
+        # it as now when a connection succeeds after the guard has been
+        # unreachable for some time.
         self._lastAttempted = None
 
         # Should we retry connecting to this entry, in spite of having it
@@ -821,7 +825,6 @@ class StateRetryOnly(object):
                 context.markAsUnreachable(g)
 
 class ChooseGuardAlgorithm(object):
-
     STATE_PRIMARY_GUARDS = StatePrimaryGuards()
     STATE_TRY_UTOPIC = StateTryUtopic()
     STATE_TRY_DYSTOPIC = StateTryDystopic()
@@ -831,11 +834,9 @@ class ChooseGuardAlgorithm(object):
         self._net = net
         self._params = params
 
-
     @property
     def hasFinished(self):
         return self._hasFinished
-
 
     def start(self, usedGuards, excludeNodes, nPrimaryGuards, selectDirGuards = False):
         self._hasFinished = False
@@ -941,10 +942,30 @@ class ChooseGuardAlgorithm(object):
                 self._state = self.STATE_TRY_UTOPIC
 
     def end(self):
+        # XXX Why?
         self._hasFinished = True
 
-    def addToTried(self, guard):
-        self._triedGuards.append(guard)
+    def entryGuardRegisterConnectStatus(self, guard, succeeded):
+        now = simtime.now()
+        self._lastTried = now
+
+        if succeeded:
+            if guard._unreachableSince:
+                guard._canRetry = False
+                guard._unreachableSince = None
+                guard._lastAttempted = now
+
+            # First contact made with this guard
+            if not guard._madeContact:
+                guard._madeContact = True
+        else:
+            if not guard._unreachableSince:
+                guard._unreachableSince = now
+                guard._lastAttempted = now 
+                guard._canRetry = False
+            elif guard._madeContact:
+                guard._canRetry = False
+                guard._lastAttempted = now
 
     def giveOneMoreChanceTo(self, tried, remaining):
         timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60

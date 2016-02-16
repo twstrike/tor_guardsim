@@ -556,56 +556,6 @@ class Client(object):
         else:
             return self._UTOPIC_GUARDS
 
-    def addNewGuard(self):
-        """Pick a Node and add it to our list of primary(?) Guards.
-
-        XXXX Should it be added to the primary list or is it not a primary
-        guard?  If we're picking a random guard, then that means the primary
-        ones probably weren't working… so is this a secondary one?
-        """
-
-        # 1. [prop259]: Check that we have not already attempted
-        # to add too many guards.  If we've added too many guards too recently,
-        # then boo-hoo-hoo no tor for you.
-        nTriedRecently = 0
-        for guard in self.currentPrimaryGuards:
-            if guard.addedWithin(self._p.TOO_RECENTLY):
-                nTriedRecently += 1
-            if nTriedRecently >= self.guardsThreshold:
-                return
-
-        # check the threshold before chosing a guard
-        if not self.checkFailoverThreshold():
-            return
-
-        possible = self.getFullList()
-        unused = [n for n in possible if not
-                  self.nodeIsInGuardList(n, self.currentPrimaryGuards)]
-
-        if self._p.PRIORITIZE_BANDWIDTH:
-            node = unused[0]
-        else:
-            node = random.choice(unused)
-
-        self.addGuard(node)
-
-    def addGuard(self, node):
-        """Try to add a single Node 'node' to the current primary guard list."""
-        guard = Guard(node)
-        print(("Picked new (%stopic) guard: %s" %
-               ("dys" if node.seemsDystopic() else "u", guard)))
-
-        lst = self.currentPrimaryGuards
-        lst.append(guard)
-
-    def nodeIsInGuardList(self, n, gl):
-        """Return true iff there is a Guard in 'gl' corresponding to the Node
-           'n'."""
-        for g in gl:
-            if g.node == n:
-                return True
-        return False
-
     def markGuard(self, guard, up):
         guard.mark(up)
 
@@ -620,88 +570,6 @@ class Client(object):
                       "in a dystopia...")
                 self.inAUtopia = True
 
-    def retryNetwork(self, *args, **kwargs):
-        """Assuming the network was down, retry from step #0."""
-        if not self.networkAppearsDown:
-            return
-
-        print("Retrying the network...")
-        if self.currentPrimaryGuards and not self.hasAnyCurrentPrimaryGuardsUp:
-            print("All %s guards are down!" % self._state)
-            self.checkFailoverThreshold()
-
-        # The detection for if we've left the dystopic is done in markGuard().
-        if self.networkAppearsDown:
-            self.networkAppearsDown = False
-
-        self.getGuardImpl()
-
-    def maybeCheckNetwork(self):
-        """In the actual implementation, this functionality should look (in some
-        cross-platform manner) to see if we have a network interface available
-        which has some plausibly-seeming configured route.
-        """
-        if self._networkDownRetryTimer.isReady():
-            self._networkDownRetryTimer.fire()
-
-    def retryPrimaryGuards(self):
-        """Retry our primary guards (from both PRIMARY_UTOPIC_GUARDS and
-        PRIMARY_DISTOPIC_GUARDS).
-
-        Cf. prop259 §2, step #2:
-            |
-            | 2. Then, if the PRIMARY_GUARDS on our list are marked offline,
-            | the algorithm attempts to retry them, to ensure that they were not
-            | flagged offline erroneously when the network was down.  This retry
-            | attempt happens only once every 20 mins to avoid infinite loops.
-            |
-        """
-        print("Retrying primary guards. We're currently %s." % self._state)
-
-        for guard in self.currentPrimaryGuards:
-            if guard._markedDown:
-                print("Primary %s guard %s was marked down, marking for retry…"
-                      % (self._state, guard))
-                guard.markForRetry()
-
-    def getGuard(self):
-        """We're about to build a circuit: return a guard to try."""
-
-        #XXXX Need an easy way to say that the UTOPIC_GUARDS includes
-        # routers advertised on 80/443.
-        guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
-
-        # XXXX [prop259] ADD_TO_SPEC
-        # 3.5. If we should retry our primary guards, then do so.
-        if not guards:
-            if self._primaryGuardsRetryTimer.isReady():
-                self._primaryGuardsRetryTimer.fire()
-                guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
-
-        # 4. If there were no available entry guards, the algorithm adds a new entry
-        # guard and returns it.  [XXX detail what "adding" means]
-        if not guards:
-            self.addNewGuard()
-            guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
-
-        # Use the first guard that works.
-        
-        for guard in guards:
-            if self.probeGuard(guard):
-                return guard
-            
-    def probeGuard(self, guard):
-        """If it's up on the network, mark it up.
-           With each try, update the failover threshold
-           Return true on success, false on failure."""
-        up = self._net.probe_node_is_up(guard.node)
-        self.markGuard(guard, up)
-        self.checkFailoverThreshold()
-
-        self._stats.addExposedTo(guard, simtime.now())
-
-        return up
-
     def connectToGuard(self, guard):
         """Try to connect to 'guard' -- if it's up on the network, mark it up.
            Return true on success, false on failure."""
@@ -715,10 +583,11 @@ class Client(object):
 
     # XXX There used to be getGuard (choose_random_entry_impl in tor)
     # but this new structure seems to make it harder
-    # Should it be the while? Is so, when shoudl it stop?
+    # Should it be the while? Is so, when should it stop?
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
 
+        print("* Will build a circuit")
         guardSelection = ChooseGuardAlgorithm(self._net, self._p)
 
         # XXX we should save used_guards and pass as parameter
@@ -771,12 +640,14 @@ class StatePrimaryGuards(object):
     # XXX this is supposed to return a guard. How?
     def next(self, context):
         print("StatePrimaryGuards - NEXT")
+        print("  len = %d, index = %d" % (len(context._primaryGuards), self._index))
 
         if len(context._primaryGuards)-1 > self._index:
             self._index += 1
             context._lastReturn = context._primaryGuards[self._index]
         else:
             print("StatePrimaryGuards - ran out of primary")
+
             # XXX Return what? Should I consider all have been tried?
             # This is not what tried means.
             for g in context._primaryGuards:

@@ -312,8 +312,6 @@ class Client(object):
         # a ClientParams object
         self._p = parameters
 
-        self._GUARD_SELECTION = ChooseGuardAlgorithm(self._net, self._p)
-
         # lists of current guards in the consensus from the dystopic and
         # utopic sets.  each guard is represented here as a torsim.Node.
         self._DYSTOPIC_GUARDS = self._UTOPIC_GUARDS = None
@@ -329,18 +327,6 @@ class Client(object):
         # configured on this client.
         self._PRIMARY_DYS = []
         self._PRIMARY_U = []
-
-        self._networkDownRetryTimer = ExponentialTimer(
-            parameters.RETRY_DELAY,
-            parameters.RETRY_MULT,
-            self.retryNetwork,
-        )
-        self._networkDownRetryTimer.pause()
-
-        self._primaryGuardsRetryTimer = ExponentialTimer(
-            3600, # 60 minutes
-            0,    # linear?
-            self.retryPrimaryGuards)
 
         # Internal state for whether we think we're on a dystopic network
         self._dystopic = False
@@ -681,27 +667,6 @@ class Client(object):
     def getGuard(self):
         """We're about to build a circuit: return a guard to try."""
 
-        # 0. Determine if the local network is potentially accessible.
-        self.maybeCheckNetwork()
-        if self.networkAppearsDown:
-            print("The network is (still) down...")
-            return
-
-        # 2. [prop259]: If the PRIMARY_GUARDS on our list are marked offline,
-        # the algorithm attempts to retry them, to ensure that they were not
-        # flagged offline erroneously when the network was down.  This retry
-        # attempt happens only once every 20 mins to avoid infinite loops.
-        #
-        # (This step happens in automatically, because
-        # Client.retryPrimaryGuards() is called every sixty minutes on a
-        # timer. )
-
-        # 3. Take the list of all available and fitting entry guards and return
-        # the top one in the list.
-        return self.getGuardImpl()
-
-
-    def getGuardImpl(self):
         #XXXX Need an easy way to say that the UTOPIC_GUARDS includes
         # routers advertised on 80/443.
         guards = filter(lambda g: g.canTry(), self.currentPrimaryGuards)
@@ -748,23 +713,27 @@ class Client(object):
 
         return up
 
+    # XXX There used to be getGuard (choose_random_entry_impl in tor)
+    # but this new structure seems to make it harder
+    # Should it be the while? Is so, when shoudl it stop?
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
 
-        # XXX we should save used_guards and pass as parameter
-        state = self._GUARD_SELECTION.start([], [], self._p.N_PRIMARY_GUARDS)
+        guardSelection = ChooseGuardAlgorithm(self._net, self._p)
 
-        # XXX are we supposed to keep trying forever?
-        # What guarantees we will find something?
+        # XXX we should save used_guards and pass as parameter
+        state = guardSelection.start([], [], self._p.N_PRIMARY_GUARDS)
+
         while True:
             # XXX will it ALWAYS succeed at returning something?
-            guard = self._GUARD_SELECTION.nextGuard()
+            guard = guardSelection.nextGuard()
 
+            # XXX this is "circuit = buildCircuitWith(entryGuard)"
             success = self.connectToGuard(guard)
-            self.entryGuardsComputeStatus(guard, success)
+            self.entryGuardRegisterConnectStatus(guard, success)
 
             if success:
-                self._GUARD_SELECTION.end(guard)
+                guardSelection.end(guard)
                 return True # or the guard, whatever
             else:
                 # XXX are we supposed to keep trying forever?
@@ -796,8 +765,23 @@ class Client(object):
 
 
 class StatePrimaryGuards(object):
+    def __init__(self):
+        self._index = -1
+
     # XXX this is supposed to return a guard. How?
     def next(self, context):
+        print("StatePrimaryGuards - NEXT")
+
+        if len(context._primaryGuards)-1 > self._index:
+            self._index += 1
+            context._lastReturn = context._primaryGuards[self._index]
+        else:
+            print("StatePrimaryGuards - ran out of primary")
+            # XXX Return what? Should I consider all have been tried?
+            # This is not what tried means.
+            for g in context._primaryGuards:
+                print("- tried: %s, %s" % (g, g._lastTried))
+
         context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
         context.checkTriedTreshold(context._triedGuards)
@@ -861,6 +845,7 @@ class ChooseGuardAlgorithm(object):
     def __init__(self, net, params):
         self._net = net
         self._params = params
+        self._lastReturn = None
 
     @property
     def hasFinished(self):
@@ -892,7 +877,10 @@ class ChooseGuardAlgorithm(object):
             self._previousState = self._state
             self._state = self.STATE_PRIMARY_GUARDS
 
-        return self._state.next(self)
+        self._lastReturn = None
+        self._state.next(self)
+        print("- will return %s" % self._lastReturn)
+        return self._lastReturn
 
     def removeUnavailableRemainingUtopicGuards(self):
         self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(

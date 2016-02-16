@@ -600,7 +600,7 @@ class ChooseGuardAlgorithm(object):
             g = self.nextByBandwidth(guards)
             guards.remove(g)
 
-            if self.markAsUnreachableAndRemoveAndAddToTriedList(g):
+            if self.markAsUnreachableAndRemoveAndAddToTriedList(g, tried):
                 # XXX what guarantees it will be in tried?
                 tried.remove(g)
 
@@ -642,8 +642,8 @@ class ChooseGuardAlgorithm(object):
         return True
 
     # XXX should we abort the current state if this transitions to another state?
-    def checkFailover(triedGuards, guards, nextState):
-        if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * guards:
+    def checkFailover(self, triedGuards, guards, nextState):
+        if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
             print("! Changed state to %s" % nextState)
             self._state = nextState
             return False

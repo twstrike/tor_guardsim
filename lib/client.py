@@ -424,17 +424,33 @@ class Client(object):
                 guard._lastAttempted = now
 
 
+def returnEachEntryInTurn(guards, turn):
+    print("Turn is %s" % turn)
+
+    g = None
+    if len(guards) > turn+1:
+        turn += 1
+        g = guards[turn]
+
+    return (g, turn)
+
 class StatePrimaryGuards(object):
+    def __init__(self):
+        self._turn = -1
+
+    def returnEachEntryInTurnImNotSure(self, guards):
+        for g in guards:
+            # XXX this is not clear in the spec
+            if not context.wasNotPossibleToConnect(g):
+                return g
+            else:
+                print("Skip %s because it failed before" % g)
+
     def next(self, context):
         print("StatePrimaryGuards - NEXT")
 
-        for g in context._primaryGuards:
-            # XXX this is not clear in the spec
-            if not context.wasNotPossibleToConnect(g):
-                context._lastReturn = g
-                break
-            else:
-                print("Skip %s because it failed before" % g)
+        context._lastReturn, self._turn = returnEachEntryInTurn(context._primaryGuards,
+                self._turn)
 
         if not context._lastReturn:
             print("StatePrimaryGuards - ran out of available primary")
@@ -449,19 +465,15 @@ class StatePrimaryGuards(object):
 
 
 class StateTryUtopic(object):
+    def __init__(self):
+        self._turn = -1
+
     def next(self, context):
         print("StateTryUtopic - NEXT")
 
         context.moveOldTriedGuardsToRemainingList()
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
-
-        for g in guards:
-            # XXX this is not clear in the spec
-            if not context.wasNotPossibleToConnect(g):
-                context._lastReturn = g
-                break
-            else:
-                print("Skip %s because it failed before" % g)
+        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
         context.markAsUnreachableAndAddToTriedList(guards)
 
@@ -484,7 +496,9 @@ class StateTryUtopic(object):
 
 
 class StateTryDystopic(object):
-    # XXX this is supposed to return a guard. How?
+    def __init__(self):
+        self._turn = -1
+
     def next(self, context):
         print("StateTryDystopic - NEXT")
         assert(False)
@@ -493,14 +507,7 @@ class StateTryDystopic(object):
 
         distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic()]
         guards = [g for g in distopicGuards if g not in context._primaryGuards]
-
-        for g in guards:
-            # XXX this is not clear in the spec
-            if not context.wasNotPossibleToConnect(g):
-                context._lastReturn = g
-                break
-            else:
-                print("Skip %s because it failed before" % g)
+        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
         context.markDystopicAsUnreachableAndAddToTriedList(guards)
 
@@ -521,7 +528,9 @@ class StateTryDystopic(object):
 
 
 class StateRetryOnly(object):
-    # XXX this is supposed to return a guard. How?
+    def __init__(self):
+        self._turn = -1
+
     def next(self, context):
         print("StateRetryOnly - NEXT")
         assert(False)
@@ -529,12 +538,7 @@ class StateRetryOnly(object):
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key="_lastTried")
 
-        for g in guards:
-            if context.wasNotPossibleToConnect(g):
-                context.markAsUnreachable(g)
-            else:
-                context._lastReturn = g
-                break
+        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
 class ChooseGuardAlgorithm(object):
     def __init__(self, net, params):

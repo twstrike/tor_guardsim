@@ -418,7 +418,7 @@ class Client(object):
         guardSelection = ChooseGuardAlgorithm(self._net, self._p)
 
         # XXX we should save used_guards and pass as parameter
-        state = guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
+        guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
                 self._consensus)
 
         # XXX it means we keep trying different guards until we succeed to build
@@ -482,18 +482,19 @@ class Client(object):
 
 
 class StatePrimaryGuards(object):
-    def __init__(self):
-        self._index = -1
-
     def next(self, context):
         print("StatePrimaryGuards - NEXT")
-        print("  len = %d, index = %d" % (len(context._primaryGuards), self._index))
 
-        if len(context._primaryGuards) - 1 > self._index:
-            self._index += 1
-            context._lastReturn = context._primaryGuards[self._index]
-        else:
-            print("StatePrimaryGuards - ran out of primary")
+        for g in context._primaryGuards:
+            # XXX this is not clear in the spec
+            if not context.wasNotPossibleToConnect(g):
+                context._lastReturn = g
+                break
+            else:
+                print("Skip %s because it failed before" % g)
+
+        if not context._lastReturn:
+            print("StatePrimaryGuards - ran out of available primary")
 
         context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
@@ -505,21 +506,19 @@ class StatePrimaryGuards(object):
 
 
 class StateTryUtopic(object):
-    def __init__(self):
-        self._index = -1
-
     def next(self, context):
         print("StateTryUtopic - NEXT")
 
         context.moveOldTriedGuardsToRemainingList()
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
 
-        print("  len = %d, index = %d" % (len(guards), self._index))
-        if len(guards) - 1 > self._index:
-            self._index += 1
-            context._lastReturn = guards[self._index]
-        else:
-            print("StateTryUtopic - ran out of primary")
+        for g in guards:
+            # XXX this is not clear in the spec
+            if not context.wasNotPossibleToConnect(g):
+                context._lastReturn = g
+                break
+            else:
+                print("Skip %s because it failed before" % g)
 
         context.markAsUnreachableAndAddToTriedList(guards)
 
@@ -545,12 +544,21 @@ class StateTryDystopic(object):
     # XXX this is supposed to return a guard. How?
     def next(self, context):
         print("StateTryDystopic - NEXT")
-        assert(false)
+        assert(False)
 
         context.moveOldTriedDystopicGuardsToRemainingList()
 
         distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic()]
         guards = [g for g in distopicGuards if g not in context._primaryGuards]
+
+        for g in guards:
+            # XXX this is not clear in the spec
+            if not context.wasNotPossibleToConnect(g):
+                context._lastReturn = g
+                break
+            else:
+                print("Skip %s because it failed before" % g)
+
         context.markDystopicAsUnreachableAndAddToTriedList(guards)
 
         if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards):
@@ -573,7 +581,7 @@ class StateRetryOnly(object):
     # XXX this is supposed to return a guard. How?
     def next(self, context):
         print("StateRetryOnly - NEXT")
-        assert(false)
+        assert(False)
 
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key="_lastTried")
@@ -581,6 +589,9 @@ class StateRetryOnly(object):
         for g in guards:
             if context.wasNotPossibleToConnect(g):
                 context.markAsUnreachable(g)
+            else:
+                context._lastReturn = g
+                break
 
 class ChooseGuardAlgorithm(object):
     def __init__(self, net, params):
@@ -625,6 +636,7 @@ class ChooseGuardAlgorithm(object):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
             self._previousState = self._state
+            print("Will retry one guards that has been tried before")
             print("! Changed state to STATE_PRIMARY_GUARDS")
             self._state = self.STATE_PRIMARY_GUARDS
 
@@ -687,7 +699,7 @@ class ChooseGuardAlgorithm(object):
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
         if len(tried) > treshold:
             print("! Changed state to STATE_RETRY_ONLY")
-            self._state = self._STATE_RETRY_ONLY
+            self._state = self.STATE_RETRY_ONLY
             return False
 
         return True
@@ -759,13 +771,6 @@ class ChooseGuardAlgorithm(object):
         if usedGuards:
             while usedGuards:
                 guard = usedGuards.pop(0)
-
-                print("used %s - not in primary = %s, in consensus = %s" % (
-                    guard,
-                    guard not in self._primaryGuards,
-                    guard._node in self._consensus
-                    ))
-
                 #TODO: What if is a bad guard? whatcha gonna do?
                 if guard not in self._primaryGuards and guard._node in self._consensus:
                     return guard
@@ -773,10 +778,16 @@ class ChooseGuardAlgorithm(object):
             # choose weighted by BW
             return tor.choose_node_by_bandwidth_weights(list(remainingUtopic))
 
+    # we should first check if it
+    #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried
+    #     any of the PRIMARY_GUARDS
     def _hasAnyPrimaryGuardBeenTriedIn(self, interval):
+        now = simtime.now()
+        print("NOW = %s" % now)
         for pg in self._primaryGuards:
+            print("%s - lastTried = %s" % (pg, pg._lastTried))
             if not pg._lastTried: continue
-            if simtime.now() > pg._lastTried + interval * 60:
+            if pg._lastTried + interval * 60 < now:
                 return True
 
         return False

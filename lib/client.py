@@ -14,7 +14,7 @@ from math import floor
 from py3hax import *
 from tornet import compareNodeBandwidth
 import simtime
-
+import tor
 
 class ExponentialTimer(object):
     """Implements an exponential timer using simulated time."""
@@ -455,6 +455,7 @@ class Client(object):
         return guard != None
 
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
+        print("entryGuardRegisterConnectStatus: %s = %s" % (guard, succeeded))
         now = simtime.now()
         guard._lastTried = now
 
@@ -468,11 +469,14 @@ class Client(object):
             if not guard._madeContact:
                 guard._madeContact = True
         else:
-            if not guard._unreachableSince:
+            if not guard._madeContact:
+                pass # remove this guard
+            elif not guard._unreachableSince:
                 guard._unreachableSince = now
                 guard._lastAttempted = now
                 guard._canRetry = False
-            elif guard._madeContact:
+                guard._madeContact = False
+            else:
                 guard._canRetry = False
                 guard._lastAttempted = now
 
@@ -540,6 +544,9 @@ class StateTryUtopic(object):
 class StateTryDystopic(object):
     # XXX this is supposed to return a guard. How?
     def next(self, context):
+        print("StateTryDystopic - NEXT")
+        assert(false)
+
         context.moveOldTriedDystopicGuardsToRemainingList()
 
         distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic()]
@@ -565,13 +572,15 @@ class StateTryDystopic(object):
 class StateRetryOnly(object):
     # XXX this is supposed to return a guard. How?
     def next(self, context):
+        print("StateRetryOnly - NEXT")
+        assert(false)
+
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key="_lastTried")
 
         for g in guards:
             if context.wasNotPossibleToConnect(g):
                 context.markAsUnreachable(g)
-
 
 class ChooseGuardAlgorithm(object):
     def __init__(self, net, params):
@@ -650,6 +659,8 @@ class ChooseGuardAlgorithm(object):
         if not self.wasNotPossibleToConnect(guard):
             return None
 
+        print("! Failed to connect to %s previously. Mark as unreachable and add to tried" % guard)
+
         self.markAsUnreachable(guard)
         triedList.append(guard)
         return guard
@@ -663,7 +674,8 @@ class ChooseGuardAlgorithm(object):
             self.markAsUnreachableAndRemoveAndAddToTriedList(pg, self._triedDystopicGuards)
 
     def wasNotPossibleToConnect(self, guard):
-        return guard._madeContact == False
+        return guard._unreachableSince != None
+        #return guard._madeContact == False
 
     def markAsUnreachable(self, guard):
         guard._unreachableSince = simtime.now()
@@ -758,8 +770,8 @@ class ChooseGuardAlgorithm(object):
                 if guard not in self._primaryGuards and guard._node in self._consensus:
                     return guard
         else:
-            #TODO: should we weight by bandwidth here? Right now assumes is weighted.
-            return random.choice(list(remainingUtopic))
+            # choose weighted by BW
+            return tor.choose_node_by_bandwidth_weights(list(remainingUtopic))
 
     def _hasAnyPrimaryGuardBeenTriedIn(self, interval):
         for pg in self._primaryGuards:

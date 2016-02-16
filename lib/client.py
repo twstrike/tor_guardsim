@@ -443,7 +443,6 @@ class Client(object):
                 guard._canRetry = False
                 guard._lastAttempted = now
 
-
 class StatePrimaryGuards(object):
     def __init__(self):
         self._index = -1
@@ -465,7 +464,8 @@ class StatePrimaryGuards(object):
 
         context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
-        context.checkTriedTreshold(context._triedGuards)
+        if not context.checkTriedTreshold(context._triedGuards)
+            return
 
         if context.allHaveBeenTried():
             context.transitionToPreviousStateOrTryUtopic()
@@ -478,16 +478,22 @@ class StateTryUtopic(object):
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
         context.markAsUnreachableAndAddToTriedList(guards)
 
-        context.checkTriedTreshold(context._triedGuards)
-        context.checkFailover(context._triedGuards,
+        if not context.checkTriedTreshold(context._triedGuards)
+            return
+
+        if not context.checkFailover(context._triedGuards,
                 context._utopicGuards, context.STATE_TRY_DYSTOPIC)
+            return
 
         context.removeUnavailableRemainingUtopicGuards() 
 
         # one more time
-        context.checkTriedTreshold(context._triedGuards)
-        context.checkFailover(context._triedGuards,
+        if not context.checkTriedTreshold(context._triedGuards)
+            return
+
+        if not context.checkFailover(context._triedGuards,
                 context._utopicGuards, context.STATE_TRY_DYSTOPIC)
+            return
 
 class StateTryDystopic(object):
     # XXX this is supposed to return a guard. How?
@@ -498,14 +504,20 @@ class StateTryDystopic(object):
         guards = [g for g in distopicGuards if g not in context._primaryGuards]
         context.markDystopicAsUnreachableAndAddToTriedList(guards)
 
-        context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
-        context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+        if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
+            return
+
+        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+            return
 
         context.removeUnavailableRemainingDystopicGuards() 
         
         # one more time
-        context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
-        context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+        if not context.checkTriedTreshold(context._triedGuards + context._triedDystopicGuards)
+            return
+
+        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+            return
 
 class StateRetryOnly(object):
     # XXX this is supposed to return a guard. How?
@@ -606,13 +618,18 @@ class ChooseGuardAlgorithm(object):
     def markAsUnreachable(self, guard):
         guard._unreachableSince = simtime.now()
                 
+    # XXX should we abort the current state if this transitions to another state?
     def checkTriedTreshold(self, guards):
         timeWindow = simtime.now() - self._params.GUARDS_TRY_TRESHOLD_TIME * 60
         treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._consensus)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow ]
         if len(tried) > treshold:
             self._state = self._STATE_RETRY_ONLY
+            return False
 
+        return True
+
+    # XXX should we abort the current state if this transitions to another state?
     def checkFailover(triedGuards, guards, nextState):
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * guards:
             self._state = nextState

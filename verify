@@ -3,26 +3,26 @@
 set -xe
 
 # vanilla
-./plot -L
+./plot --legacy
 ./plot
 
 # Fascist network
-./plot -F -L
-./plot -F
+./plot --fascist-firewall --legacy
+./plot --fascist-firewall
 
 # Flaky
-./plot -f -L
-./plot -f
+./plot --flaky-network --legacy
+./plot --flaky-network
 
 # Evil
-./plot -e -L
-./plot -e
+./plot --evil-filtering --legacy
+./plot --evil-filtering
 
 # Sniper
-./plot -s -L
-./plot -s
+./plot --sniper-network --legacy
+./plot --sniper-network
 
 # switch between networks
-./plot -S -L
-./plot -S
+./plot --switching-network --legacy
+./plot --switching-network
 

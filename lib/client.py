@@ -531,6 +531,7 @@ class StateTryUtopic(object):
 class StateTryDystopic(object):
     def __init__(self):
         self._turn = -1
+        self._remaining = []
 
     def next(self, context):
         print("StateTryDystopic - NEXT")
@@ -548,6 +549,22 @@ class StateTryDystopic(object):
 
         if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
+
+        # Return each entry from REMAINING_DYSTOPIC_GUARDS using
+        # NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
+        # to it, remove the entry from REMAINING_DYSTOPIC_GUARDS, mark it as
+        # unreachable and add it to TRIED_DYSTOPIC_GUARDS.
+	# XXX Does it mean if we have something to return by this point,
+        # we should not proceed?
+        # I'll assume so.
+        if context._lastReturn:
+            return
+
+        if not self._remaining: self._remaining = list(context._remainingDystopicGuards)
+        if len(self._remaining) > 0:
+            g = context.nextByBandwidth(self._remaining)
+            self._remaining.remove(g)
+            context._lastReturn = g
 
         context.removeUnavailableRemainingDystopicGuards()
 

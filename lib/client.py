@@ -16,6 +16,8 @@ from tornet import compareNodeBandwidth
 import simtime
 import tor
 
+import pprint
+
 class ExponentialTimer(object):
     """Implements an exponential timer using simulated time."""
 
@@ -100,6 +102,9 @@ class ClientParams(object):
 
 class Guard(object):
     """Represents what a client knows about a guard."""
+
+    def __repr__(self):
+        return pprint.pformat(vars(self), indent=6, width=2)
 
     def __init__(self, node, pDirectoryCache=0.9):
         # tornet.Node instance
@@ -288,6 +293,9 @@ class Stats(object):
 class Client(object):
     """A stateful client implementation of the guard selection algorithm."""
 
+    def __repr__(self):
+        return pprint.pformat(vars(self), indent=4, width=1)
+
     def __init__(self, network, stats, parameters):
 
         # a torsim.Network object.
@@ -381,7 +389,6 @@ class Client(object):
                 print("We tried 100 without success")
                 print("  guard is %s" % guard)
 
-            # XXX this is "circuit = buildCircuitWith(entryGuard)"
             circuit = self.buildCircuitWith(guard)
             if circuit:
                 guardSelection.end(guard)
@@ -590,13 +597,24 @@ class StateRetryOnly(object):
 
     def next(self, context):
         print("StateRetryOnly - NEXT")
+        print("tried = %d, triedDystopic = %s" % (
+            len(context._triedGuards), len(context._triedDystopicGuards)
+        ))
 
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key=lambda g: g._lastTried)
 
+
         context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
 class ChooseGuardAlgorithm(object):
+    def __repr__(self):
+        vals = vars(self)
+        filtered = { k: vals[k] for k in [
+            "_hasFinished", "_state", "_previousState", "_primaryGuards", "_triedGuards"]
+        }
+        return pprint.pformat(filtered, indent=4, width=1)
+
     def __init__(self, net, params):
         self._net = net
         self._params = params

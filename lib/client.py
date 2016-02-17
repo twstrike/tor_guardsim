@@ -392,8 +392,7 @@ class Client(object):
             else:
                 # XXX are we supposed to keep trying forever?
                 # What guarantees we will find something?
-                # return False
-                pass
+                return False
 
     # XXX What is this supposed to do? Build the circuit data structure, OR 
     # connect to the circuit?

@@ -1,9 +1,9 @@
 from __future__ import print_function
 
-import client
 import tor
 import random
 import simtime
+from guard import GetGuard
 
 # TODO implement prioritize bandwith behavior
 
@@ -48,16 +48,9 @@ class Client(object):
 
         self._ALL_GUARDS = []
         for node in self._net.new_consensus():
-            existing = [guard for guard in self._GUARD_LIST if guard._node.getID() == node.getID()]
-
-            guard = None
-            if len(existing) == 1:
-                guard = existing[0]
-            else:
-                guard = client.Guard(node)
-                self._ALL_GUARDS.append(guard)
-
+            guard = GetGuard(node)
             guard.markListed()  # by defition listed is in the latest consensus
+            self._ALL_GUARDS.append(guard)
 
         # Whatever is not in the consensus, we dont know about
         # See nodelist_set_consensus()

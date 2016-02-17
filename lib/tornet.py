@@ -220,12 +220,18 @@ class Network(object):
         """Called when a simulated client is trying to connect to 'node'.
            Returns true iff the connection succeeds."""
 
+        up = node.isReallyUp()
+
         # It takes some time to connect. Not adding this is unfair with the
         # original algorithm which seems to make less connections attempts than
         # the proposal
-        simtime.advanceTime(2)
+        if up:
+            simtime.advanceTime(random.randint(2, 29))
+        else:
+            simtime.advanceTime(random.randint(0, 30))
 
-        return node.isReallyUp()
+        return up
+
 
 
 class _NetworkDecorator(object):

@@ -649,6 +649,10 @@ class ChooseGuardAlgorithm(object):
         self.giveOneMoreChanceTo(self._triedDystopicGuards, self._remainingDystopicGuards)
 
     def filterGuards(self, guards, selectDirGuards, excludeNodes):
+        # Optimize happy path
+        if not selectDirGuards and not excludeNodes:
+            return guards
+
         # XXX they should be entry_is_live(g)
         return [g for g in guards if not (selectDirGuards and not g._isDirectoryCache) and not g._node in excludeNodes]
 

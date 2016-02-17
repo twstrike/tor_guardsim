@@ -25,3 +25,18 @@ set -xe
 #./plot -S -D
 #./plot -S -r
 #./plot -S -r -D
+
+# Flaky
+# -f
+./plot -f -L
+./plot -f
+
+# Evil
+# -e
+./plot -e -L
+./plot -e
+
+# Sniper
+# -s
+./plot -s -L
+./plot -s

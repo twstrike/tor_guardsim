@@ -306,6 +306,10 @@ class Client(object):
         # The number of listed primary guards that we prioritise connecting to.
         self.NUM_PRIMARY_GUARDS = 3  # chosen by dice roll, guaranteed to be random
 
+        # For how long we should keep looping until we find a guard we can use
+        # to build a circuit, in seconds
+        self._BUILD_CIRCUIT_TIMEOUT = 30
+
         # At bootstrap, we get a new consensus
         self.updateGuardLists()
 
@@ -363,7 +367,12 @@ class Client(object):
         # XXX it means we keep trying different guards until we succeed to build
         # a circuit (even if the circuit failed by other reasons)
         tries = 0
+        startTime = simtime.now()
         while True:
+            if simtime.now() - startTime > self._BUILD_CIRCUIT_TIMEOUT:
+                print("Timed out while trying to build a circuit")
+                return False
+
             # XXX will it ALWAYS succeed at returning something?
             guard = guardSelection.nextGuard()
             tries += 1

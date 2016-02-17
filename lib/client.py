@@ -640,7 +640,9 @@ class ChooseGuardAlgorithm(object):
         timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
         guards = [g for g in tried if g._unreachableSince]
         for g in guards:
-            if g._unreachableSince < timeWindow: remaining.append(g)
+            if g._unreachableSince < timeWindow:
+                g._canRetry = True
+                remaining.append(g)
 
     def moveOldTriedGuardsToRemainingList(self):
         self.giveOneMoreChanceTo(self._triedGuards, self._remainingUtopicGuards)
@@ -651,7 +653,7 @@ class ChooseGuardAlgorithm(object):
     def filterGuards(self, guards, selectDirGuards, excludeNodes):
         # Optimize happy path
         if not selectDirGuards and not excludeNodes:
-            return guards
+            return [g for g in guards if tor.entry_is_live(g)]
 
         # XXX they should be entry_is_live(g)
         return [g for g in guards if not (selectDirGuards and not g._isDirectoryCache) and not g._node in excludeNodes]

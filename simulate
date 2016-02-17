@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TIMES=200
+TIMES=500
 
 for i in `seq 1 $TIMES`;
 do

@@ -2,41 +2,27 @@
 
 set -xe
 
-# legacy
+# vanilla
 ./plot -L
-# ./plot -L -r # It does not make sense atm
-
-# 259
-./plot 
-#./plot -D
-#./plot -r
-#./plot -r -D
+./plot
 
 # Fascist network
 ./plot -F -L
 ./plot -F
-#./plot -F -D
-#./plot -F -r
-#./plot -F -r -D
-
-# switch between networks
-./plot -S -L
-./plot -S
-#./plot -S -D
-#./plot -S -r
-#./plot -S -r -D
 
 # Flaky
-# -f
 ./plot -f -L
 ./plot -f
 
 # Evil
-# -e
 ./plot -e -L
 ./plot -e
 
 # Sniper
-# -s
 ./plot -s -L
 ./plot -s
+
+# switch between networks
+./plot -S -L
+./plot -S
+

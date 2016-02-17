@@ -309,7 +309,9 @@ class Client(object):
         # used guards
         self._usedGuards = []
 
-        self._consensus = None
+        # All guards in the latest consensus
+        # XXX net._get_consensus() should return Guards
+        self._ALL_GUARDS = []
 
         # The number of listed primary guards that we prioritise connecting to.
         self.NUM_PRIMARY_GUARDS = 3  # chosen by dice roll, guaranteed to be random
@@ -321,17 +323,34 @@ class Client(object):
         # At bootstrap, we get a new consensus
         self.updateGuardLists()
 
+    def inLatestConsensus(self, guard):
+        return guard._listed
+
     def updateGuardLists(self):
         """Called at start and when a new consensus should be made & received:
            updates *TOPIC_GUARDS."""
 
+        for g in self._usedGuards:
+            g.markUnlisted()
+
         # We received a new consensus now, and use THIS until we receive a new
         # consensus
-        self._consensus = list(self._net.new_consensus())
+        self._ALL_GUARDS = []
+        for n in list(self._net.new_consensus()):
+            existing = [g for g in self._usedGuards if g._node == n]
+
+            guard = None
+            if existing:
+                guard = existing[0]
+            else:
+                guard = Guard(n)
+                self._ALL_GUARDS.append(guard)
+
+            guard.markListed()
 
         # Update BAD status for usedGuards
         for g in self._usedGuards:
-            g._bad = g._node not in self._consensus
+            g._bad = not self.inLatestConsensus(g)
  
     def markGuard(self, guard, up):
         guard.mark(up)
@@ -367,7 +386,7 @@ class Client(object):
 
         # XXX we should save used_guards and pass as parameter
         guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
-                self._consensus)
+                self._ALL_GUARDS)
 
         # XXX it means we keep trying different guards until we succeed to build
         # a circuit (even if the circuit failed by other reasons)
@@ -615,12 +634,12 @@ class ChooseGuardAlgorithm(object):
     def hasFinished(self):
         return self._hasFinished
 
-    def start(self, usedGuards, excludeNodes, nPrimaryGuards, consensus, selectDirGuards = False):
+    def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, selectDirGuards = False):
         self._hasFinished = False
         self._usedGuards = usedGuards
 
         excludeNodesSet = set(excludeNodes)
-        self._consensus = list(consensus)
+        self._guardsInConsensus = list(guardsInConsensus)
         self._guards = self._getGuards(selectDirGuards, excludeNodesSet)
         self._utopicGuards = self._guards
         self._dystopicGuards = self._filterDystopicGuardsFrom(self._utopicGuards)
@@ -694,7 +713,7 @@ class ChooseGuardAlgorithm(object):
     # XXX should we abort the current state if this transitions to another state?
     def checkTriedTreshold(self, guards):
         timeWindow = simtime.now() - self._params.GUARDS_TRY_TRESHOLD_TIME * 60
-        treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._consensus)
+        treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._guardsInConsensus)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
         if len(tried) > treshold:
             #print("! Changed state to STATE_RETRY_ONLY")
@@ -750,9 +769,9 @@ class ChooseGuardAlgorithm(object):
         self.giveOneMoreChanceTo(self._triedDystopicGuards, self._remainingDystopicGuards)
 
     def _getGuards(self, selectDirGuards, excludeNodes):
-        guards = [n for n in self._consensus if n.V2flag] if selectDirGuards else self._consensus
-        guardsLessExclusions = set(guards) - excludeNodes
-        return set([Guard(n) for n in guardsLessExclusions])
+        # XXX they should be entry_is_live(g)
+        guardsLessExclusions = [g for g in self._guardsInConsensus if not (selectDirGuards and not g._isDirectoryCache) and not g._node in excludeNodes]
+        return set(guardsLessExclusions)
 
     def _filterDystopicGuardsFrom(self, guards):
         return set([dg for dg in guards if dg.node.seemsDystopic()])
@@ -777,7 +796,7 @@ class ChooseGuardAlgorithm(object):
                 guard = usedGuards.pop(0)
 
                 #TODO: What if is a bad guard? whatcha gonna do?
-                if guard not in self._primaryGuards and guard._node in self._consensus:
+                if guard not in self._primaryGuards and guard in self._guardsInConsensus:
                     return guard
         else:
             # choose weighted by BW

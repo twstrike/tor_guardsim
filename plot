@@ -6,7 +6,7 @@ mkdir -p ./out
 
 echo "Plotting ${@:1} to out/$FILENAME"
 
-echo "success total success-rate capacity 1 15 30 exposure-1 exposure-15 exposure-30 guards-till-first-circuit time-till-first-circuit" > ./out/${FILENAME}.txt
+echo "success total success-rate capacity 1 15 30 exposure-1 exposure-15 exposure-30 guards-till-first-circuit time-till-first-circuit total-time" > ./out/${FILENAME}.txt
 ./simulate "${@:1}" >> ./out/${FILENAME}.txt
 
 # success rate

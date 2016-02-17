@@ -651,6 +651,7 @@ class ChooseGuardAlgorithm(object):
         self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
         return self._state
 
+    # XXX This is slow
     def nextByBandwidth(self, guards):
         return tor.choose_node_by_bandwidth_weights(guards)
 
@@ -776,6 +777,7 @@ class ChooseGuardAlgorithm(object):
     def _filterDystopicGuardsFrom(self, guards):
         return set([dg for dg in guards if dg.node.seemsDystopic()])
 
+    # XXX This is slow
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
         #This is not taking into account the remaining dystopic guards. Is that okay?
         used = list(usedGuards)
@@ -790,6 +792,7 @@ class ChooseGuardAlgorithm(object):
 
             self._primaryGuards.append(g)
 
+    # XXX This is slow
     def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
         if usedGuards:
             while usedGuards:

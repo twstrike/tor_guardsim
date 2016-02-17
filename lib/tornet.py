@@ -226,9 +226,9 @@ class Network(object):
         # original algorithm which seems to make less connections attempts than
         # the proposal
         if up:
-            simtime.advanceTime(random.randint(2, 29))
+            simtime.advanceTime(2)
         else:
-            simtime.advanceTime(random.randint(0, 30))
+            simtime.advanceTime(4)
 
         return up
 

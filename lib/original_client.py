@@ -120,7 +120,7 @@ class Client(object):
         now = simtime.now()
         g._addedAt = random.randint(now - 3600 * 24 * 30, now - 1)
 
-        assert (tor.entry_is_live(g))
+        #assert (tor.entry_is_live(g))
 
         return g
 

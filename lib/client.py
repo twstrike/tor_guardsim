@@ -313,6 +313,9 @@ class Client(object):
         # XXX net._get_consensus() should return Guards
         self._ALL_GUARDS = []
 
+        # For performance, filters all dystopics when a consensus is received
+        self._ALL_DYSTOPIC = []
+
         # The number of listed primary guards that we prioritise connecting to.
         self.NUM_PRIMARY_GUARDS = 3  # chosen by dice roll, guaranteed to be random
 
@@ -347,6 +350,9 @@ class Client(object):
                 self._ALL_GUARDS.append(guard)
 
             guard.markListed()
+
+        # Filter dystopics
+        self._ALL_DYSTOPIC = [dg for dg in self._ALL_GUARDS if dg._node.seemsDystopic()]
 
         # Update BAD status for usedGuards
         for g in self._usedGuards:
@@ -386,7 +392,7 @@ class Client(object):
 
         # XXX we should save used_guards and pass as parameter
         guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
-                self._ALL_GUARDS)
+                self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
         # XXX it means we keep trying different guards until we succeed to build
         # a circuit (even if the circuit failed by other reasons)
@@ -621,6 +627,8 @@ class ChooseGuardAlgorithm(object):
         self._params = params
         
         self._primaryGuards = []
+        self._guardsInConsensus = []
+        self._dystopicGuardsInConsensus = []
 
         self._lastReturn = None
         self._previousState = None
@@ -634,15 +642,22 @@ class ChooseGuardAlgorithm(object):
     def hasFinished(self):
         return self._hasFinished
 
-    def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, selectDirGuards = False):
+    def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus, selectDirGuards = False):
         self._hasFinished = False
         self._usedGuards = usedGuards
 
         excludeNodesSet = set(excludeNodes)
         self._guardsInConsensus = list(guardsInConsensus)
+        self._dystopicGuardsInConsensus = list(dystopicGuardsInConsensus)
+
         self._guards = self._getGuards(selectDirGuards, excludeNodesSet)
         self._utopicGuards = self._guards
-        self._dystopicGuards = self._filterDystopicGuardsFrom(self._utopicGuards)
+
+        # XXX This is also slow. Takes ~5.385 seconds cummulative.
+        # We could split utopic/dystopic once per consensus received
+        # self._dystopicGuards = self._filterDystopicGuardsFrom(self._utopicGuards)
+        self._dystopicGuards = self._filterDystopicGuards(selectDirGuards, excludeNodesSet)
+
         usedGuardsSet = set(usedGuards)
         self._remainingUtopicGuards = self._utopicGuards - usedGuardsSet
         self._remainingDystopicGuards = self._dystopicGuards - usedGuardsSet
@@ -769,13 +784,20 @@ class ChooseGuardAlgorithm(object):
     def moveOldTriedDystopicGuardsToRemainingList(self):
         self.giveOneMoreChanceTo(self._triedDystopicGuards, self._remainingDystopicGuards)
 
-    def _getGuards(self, selectDirGuards, excludeNodes):
+    def filterGuards(self, guards, selectDirGuards, excludeNodes):
         # XXX they should be entry_is_live(g)
-        guardsLessExclusions = [g for g in self._guardsInConsensus if not (selectDirGuards and not g._isDirectoryCache) and not g._node in excludeNodes]
-        return set(guardsLessExclusions)
+        return [g for g in guards if not (selectDirGuards and not g._isDirectoryCache) and not g._node in excludeNodes]
+
+    def _getGuards(self, selectDirGuards, excludeNodesSet):
+        guards = self.filterGuards(self._guardsInConsensus, selectDirGuards, excludeNodesSet)
+        return set(guards)
+
+    def _filterDystopicGuards(self, selectDirGuards, excludeNodesSet):
+        guards = self.filterGuards(self._dystopicGuardsInConsensus, selectDirGuards, excludeNodesSet)
+        return set(guards)
 
     def _filterDystopicGuardsFrom(self, guards):
-        return set([dg for dg in guards if dg.node.seemsDystopic()])
+        return set([dg for dg in guards if dg._node.seemsDystopic()])
 
     # XXX This is slow
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):

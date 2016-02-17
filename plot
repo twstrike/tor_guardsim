@@ -18,8 +18,22 @@ gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set 
 #  > ./out/exposure_original_with_${FILENAME}.png
 
 # exposure
-gnuplot -p -e "set terminal png size 700,300; unset xtics; set yrange [0:]; set key autotitle columnhead; set key outside; set key bottom; set style data histograms; set style fill solid border; set style histogram rowstacked; set boxwidth 1 relative; plot for[COL=8:10] './out/${FILENAME}.txt' using COL title columnheader" \
-  > ./out/exposure_with_${FILENAME}.png
+SCRIPT="
+set terminal png size 700,300;
+unset xtics;
+set yrange [0:];
+set key autotitle columnhead;
+set key outside;
+set key bottom;
+set style data histograms;
+set style fill solid border;
+set style histogram rowstacked;
+set boxwidth 1 relative;
+
+plot for[COL=8:10] './out/${FILENAME}.txt' using COL title columnheader;
+"
+
+gnuplot -p -e "$SCRIPT" > ./out/exposure_with_${FILENAME}.png  
 
 # using 2:1 with points pt 3
 

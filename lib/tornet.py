@@ -327,7 +327,7 @@ class SwitchingNetwork(_NetworkDecorator):
         self._real_network = network
 
     def _switch_networks(self):
-        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork, self._real_network, SlowRecovery]
+        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork, self._real_network, SlowRecoveryNetwork]
         newNet = random.choice(allNetworks)
         if newNet == self._real_network:
             print("Network switched to real network")

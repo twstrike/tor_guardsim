@@ -325,8 +325,6 @@ class Client(object):
         """Called at start and when a new consensus should be made & received:
            updates *TOPIC_GUARDS."""
 
-        print(" > Received a new consensus")
-
         # We received a new consensus now, and use THIS until we receive a new
         # consensus
         self._consensus = list(self._net.new_consensus())
@@ -365,7 +363,6 @@ class Client(object):
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
 
-        print("* Will build a circuit")
         guardSelection = ChooseGuardAlgorithm(self._net, self._p)
 
         # XXX we should save used_guards and pass as parameter
@@ -387,7 +384,6 @@ class Client(object):
 
             if tries % 100 == 0:
                 print("We tried 100 without success")
-                print("  guard is %s" % guard)
 
             circuit = self.buildCircuitWith(guard)
             if circuit:
@@ -421,7 +417,6 @@ class Client(object):
         return success
 
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
-        print("entryGuardRegisterConnectStatus: %s = %s" % (guard, succeeded))
         now = simtime.now()
         guard._lastTried = now
 
@@ -448,8 +443,6 @@ class Client(object):
 
 
 def returnEachEntryInTurn(guards, turn):
-    print("Turn is %s" % turn)
-
     g = None
     if len(guards) > turn+1:
         turn += 1
@@ -464,21 +457,16 @@ def returnEachEntryInTurnImNotSure(guards, context):
         # XXX this is not clear in the spec
         if not context.wasNotPossibleToConnect(g):
             return g
-        else:
-            print("Skip %s because it failed before" % g)
 
 class StatePrimaryGuards(object):
     def __init__(self):
         self._turn = -1
 
     def next(self, context):
-        print("StatePrimaryGuards - NEXT")
+        #print("StatePrimaryGuards - NEXT")
 
         context._lastReturn, self._turn = returnEachEntryInTurn(context._primaryGuards,
                 self._turn)
-
-        if not context._lastReturn:
-            print("StatePrimaryGuards - ran out of available primary")
 
         context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
@@ -486,7 +474,6 @@ class StatePrimaryGuards(object):
             return
 
         if context.allHaveBeenTried():
-            print("All have been tried")
             context.transitionToPreviousStateOrTryUtopic()
 
 
@@ -496,7 +483,7 @@ class StateTryUtopic(object):
         self._remaining = []
 
     def next(self, context):
-        print("StateTryUtopic - NEXT")
+        #print("StateTryUtopic - NEXT")
 
         # XXX This should add back to REMAINING_UTOPIC_GUARDS
         # When are they taken from REMAINING_UTOPIC_GUARDS?
@@ -549,7 +536,7 @@ class StateTryDystopic(object):
         self._remaining = []
 
     def next(self, context):
-        print("StateTryDystopic - NEXT")
+        #print("StateTryDystopic - NEXT")
 
         context.moveOldTriedDystopicGuardsToRemainingList()
 
@@ -596,14 +583,9 @@ class StateRetryOnly(object):
         self._turn = -1
 
     def next(self, context):
-        print("StateRetryOnly - NEXT")
-        print("tried = %d, triedDystopic = %s" % (
-            len(context._triedGuards), len(context._triedDystopicGuards)
-        ))
-
+        #print("StateRetryOnly - NEXT")
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key=lambda g: g._lastTried)
-
 
         context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
@@ -657,13 +639,11 @@ class ChooseGuardAlgorithm(object):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
             self._previousState = self._state
-            print("Will retry one guards that has been tried before")
-            print("! Changed state to STATE_PRIMARY_GUARDS")
+            #print("! Changed state to STATE_PRIMARY_GUARDS")
             self._state = self.STATE_PRIMARY_GUARDS
 
         self._lastReturn = None
         self._state.next(self)
-        print("- will return %s" % self._lastReturn)
 
         return self._lastReturn
 
@@ -692,8 +672,6 @@ class ChooseGuardAlgorithm(object):
         if not self.wasNotPossibleToConnect(guard):
             return None
 
-        print("! Failed to connect to %s previously. Mark as unreachable and add to tried" % guard)
-
         self.markAsUnreachable(guard)
         triedList.append(guard)
         return guard
@@ -719,7 +697,7 @@ class ChooseGuardAlgorithm(object):
         treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._consensus)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
         if len(tried) > treshold:
-            print("! Changed state to STATE_RETRY_ONLY")
+            #print("! Changed state to STATE_RETRY_ONLY")
             self._state = self.STATE_RETRY_ONLY
             return False
 
@@ -728,7 +706,7 @@ class ChooseGuardAlgorithm(object):
     # XXX should we abort the current state if this transitions to another state?
     def checkFailover(self, triedGuards, guards, nextState):
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
-            print("! Changed state to %s" % nextState)
+            #print("! Changed state to %s" % nextState)
             self._state = nextState
             return False
 
@@ -744,15 +722,14 @@ class ChooseGuardAlgorithm(object):
             self.markAsUnreachable(g)
 
     def allHaveBeenTried(self):
-        print("All primary guards = %s" % self._primaryGuards)
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
 
     def transitionToPreviousStateOrTryUtopic(self):
             if self._previousState:
-                print("! Changed state to previous = %s" % self._previousState)
+                #print("! Changed state to previous = %s" % self._previousState)
                 self._state = self._previousState
             else:
-                print("! Changed state to STATE_TRY_UTOPIC")
+                #print("! Changed state to STATE_TRY_UTOPIC")
                 self._state = self.STATE_TRY_UTOPIC
 
     def end(self, guard):
@@ -811,9 +788,7 @@ class ChooseGuardAlgorithm(object):
     #     any of the PRIMARY_GUARDS
     def _hasAnyPrimaryGuardBeenTriedIn(self, interval):
         now = simtime.now()
-        print("NOW = %s" % now)
         for pg in self._primaryGuards:
-            print("%s - lastTried = %s" % (pg, pg._lastTried))
             if not pg._lastTried: continue
             if pg._lastTried + interval * 60 < now:
                 return True

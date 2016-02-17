@@ -664,18 +664,31 @@ class ChooseGuardAlgorithm(object):
         self._triedGuards, self._triedDystopicGuards = [], []
         self._state = self.STATE_PRIMARY_GUARDS
         self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
-        return self._state
 
     # XXX This is slow
     def nextByBandwidth(self, guards):
         return tor.choose_node_by_bandwidth_weights(guards)
 
+    # XXX How should the transition happen?
+    # Immediately, or on the next call to NEXT?
+    def transitionTo(self, state):
+        return self.transitionOnNextCall(state)
+        # return self.transitionImmediatelyTo(state)
+
+    def transitionOnNextCall(self, state):
+        print("! Transitioned to %s" % state)
+        self._state = state
+        return False # should not continue execution
+
+    def transitionImmediatelyTo(self, state):
+        self.transitionTo(state)
+        return self.nextGuard()
+
     def nextGuard(self):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
             self._previousState = self._state
-            #print("! Changed state to STATE_PRIMARY_GUARDS")
-            self._state = self.STATE_PRIMARY_GUARDS
+            self.transitionTo(self.STATE_PRIMARY_GUARDS)
 
         self._lastReturn = None
         self._state.next(self)
@@ -732,18 +745,14 @@ class ChooseGuardAlgorithm(object):
         treshold = self._params.GUARDS_TRY_TRESHOLD * len(self._guardsInConsensus)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
         if len(tried) > treshold:
-            #print("! Changed state to STATE_RETRY_ONLY")
-            self._state = self.STATE_RETRY_ONLY
-            return False
+            return self.transitionTo(self.STATE_RETRY_ONLY)
 
         return True
 
     # XXX should we abort the current state if this transitions to another state?
     def checkFailover(self, triedGuards, guards, nextState):
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
-            #print("! Changed state to %s" % nextState)
-            self._state = nextState
-            return False
+            return self.transitionTo(nextState)
 
         return True
 
@@ -761,11 +770,9 @@ class ChooseGuardAlgorithm(object):
 
     def transitionToPreviousStateOrTryUtopic(self):
             if self._previousState:
-                #print("! Changed state to previous = %s" % self._previousState)
-                self._state = self._previousState
+                return self.transitionTo(self._previousState)
             else:
-                #print("! Changed state to STATE_TRY_UTOPIC")
-                self._state = self.STATE_TRY_UTOPIC
+                return self.transitionTo(self.STATE_TRY_UTOPIC)
 
     def end(self, guard):
         # XXX Why?

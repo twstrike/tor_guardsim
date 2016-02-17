@@ -313,6 +313,8 @@ class Client(object):
         """Called at start and when a new consensus should be made & received:
            updates *TOPIC_GUARDS."""
 
+        print(" > Received a new consensus")
+
         # We received a new consensus now, and use THIS until we receive a new
         # consensus
         self._consensus = list(self._net.new_consensus())
@@ -366,7 +368,7 @@ class Client(object):
             guard = guardSelection.nextGuard()
             tries += 1
 
-            if tries % 100:
+            if tries % 100 == 0:
                 print("We tried 100 without success")
                 print("  guard is %s" % guard)
 
@@ -673,7 +675,7 @@ class ChooseGuardAlgorithm(object):
 
     def checkTriedDystopicFailoverAndMarkAllAsUnreachable(self):
         if self.checkFailover(self._triedDystopicGuards,
-                              self._dystopicGuards, self.STATE_ONLY_RETRY):
+                              self._dystopicGuards, self.STATE_RETRY_ONLY):
             return True
 
         guards = self._primaryGuards + self._triedGuards + self._triedDystopicGuards

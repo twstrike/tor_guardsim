@@ -471,16 +471,20 @@ class StatePrimaryGuards(object):
             return
 
         if context.allHaveBeenTried():
+            print("All have been tried")
             context.transitionToPreviousStateOrTryUtopic()
 
 
 class StateTryUtopic(object):
     def __init__(self):
         self._turn = -1
+        self._remaining = []
 
     def next(self, context):
         print("StateTryUtopic - NEXT")
 
+        # XXX This should add back to REMAINING_UTOPIC_GUARDS
+        # When are they taken from REMAINING_UTOPIC_GUARDS?
         context.moveOldTriedGuardsToRemainingList()
 
         # XXX When are USED_GUARDS removed from PRIMARY_GUARDS?
@@ -496,6 +500,22 @@ class StateTryUtopic(object):
         if not context.checkFailover(context._triedGuards,
                                      context._utopicGuards, context.STATE_TRY_DYSTOPIC):
             return
+
+	# Return each entry from REMAINING_UTOPIC_GUARDS using
+  	# NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
+  	# to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
+  	# unreachable and add it to TRIED_GUARDS.
+	# XXX Does it mean if we have something to return by this point,
+        # we should not proceed?
+        # I'll assume so.
+        if context._lastReturn:
+            return
+
+        if not self._remaining: self._remaining = list(context._remainingUtopicGuards)
+        if len(self._remaining) > 0:
+            g = context.nextByBandwidth(self._remaining)
+            self._remaining.remove(g)
+            context._lastReturn = g
 
         context.removeUnavailableRemainingUtopicGuards()
 

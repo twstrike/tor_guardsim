@@ -584,7 +584,7 @@ class StateRetryOnly(object):
         print("StateRetryOnly - NEXT")
 
         guards = context._triedGuards + context._triedDystopicGuards
-        guards.sort(key="_lastTried")
+        guards.sort(key=lambda g: g._lastTried)
 
         context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 

@@ -534,7 +534,6 @@ class StateTryDystopic(object):
 
     def next(self, context):
         print("StateTryDystopic - NEXT")
-        assert(False)
 
         context.moveOldTriedDystopicGuardsToRemainingList()
 
@@ -566,7 +565,6 @@ class StateRetryOnly(object):
 
     def next(self, context):
         print("StateRetryOnly - NEXT")
-        assert(False)
 
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key="_lastTried")

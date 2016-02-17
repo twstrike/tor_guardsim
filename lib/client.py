@@ -781,8 +781,9 @@ class ChooseGuardAlgorithm(object):
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
         #This is not taking into account the remaining dystopic guards. Is that okay?
         used = list(usedGuards)
+        remaining = list(remainingUtopic)
         while len(self._primaryGuards) < nPrimaryGuards:
-            g = self._nextPrimaryGuard(used, remainingUtopic)
+            g = self._nextPrimaryGuard(used, remaining)
 
             # From proposal:
             # If any PRIMARY_GUARDS have become bad, remove the guard from
@@ -802,8 +803,12 @@ class ChooseGuardAlgorithm(object):
                 if guard not in self._primaryGuards and guard in self._guardsInConsensus:
                     return guard
         else:
-            # choose weighted by BW
-            return tor.choose_node_by_bandwidth_weights(list(remainingUtopic))
+            # XXX should we remove the chosen from remaining?
+            # choose weighted by BW (disabled for performance)
+            # we can optimize by calculating the bw weights only once (outside
+            # of this function)
+            # return tor.choose_node_by_bandwidth_weights(remainingUtopic)
+            return random.choice(remainingUtopic)
 
     # we should first check if it
     #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried

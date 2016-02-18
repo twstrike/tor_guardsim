@@ -591,7 +591,8 @@ class ChooseGuardAlgorithm(object):
         #return guard._madeContact == False
 
     def markAsUnreachable(self, guard):
-        guard._unreachableSince = simtime.now()
+        if not guard._unreachableSince:
+            guard._unreachableSince = simtime.now()
 
     # XXX should we abort the current state if this transitions to another state?
     def checkTriedTreshold(self, guards):

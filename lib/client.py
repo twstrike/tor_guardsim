@@ -702,7 +702,7 @@ class ChooseGuardAlgorithm(object):
             # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
             # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
             # ... so we just don't add it.
-                if not guard._bad and guard not in self._primaryGuards and guard in self._guardsInConsensus:
+                if guard not in self._primaryGuards and not guard._bad:
                     return guard
 
         # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with

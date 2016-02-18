@@ -378,9 +378,14 @@ class StateTryUtopic(object):
         # XXX When are USED_GUARDS removed from PRIMARY_GUARDS?
         # Is not PRIMARY_GUARDS built from USED_GUARDS preferably?
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
-        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
-        context.markAsUnreachableAndAddToTriedList(guards)
+        # For each entry, if it was not possible to connect to it, mark the
+        # entry as unreachable and add it to TRIED_GUARDS.
+        if self._turn > -1:
+            lastTried, _ = returnEachEntryInTurn(guards, self._turn-1)
+            context.markAsUnreachableAndAddToTried(lastTried, context._triedGuards)
+
+        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
         if not context.checkTriedTreshold(context._triedGuards):
             return

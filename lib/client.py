@@ -465,6 +465,9 @@ class StateTryDystopic(object):
         if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
 
+        # XXX what happens if no threshold fails?
+        print("No treshold has failed")
+
 
 class StateRetryOnly(object):
     def __init__(self):
@@ -572,11 +575,12 @@ class ChooseGuardAlgorithm(object):
         # XXX What is the difference of doing this by bandwidth if we are not
         # returning anything?
         # Does it make any difference if we are removing and marking in a different order?
-        guards = list(remaining)  # makes a copy
-        while len(guards) > 0:
+        guards = list(remaining)  # must be a list to use nextByBandwidth
+        while guards:
             g = self.nextByBandwidth(guards)
+            guards.remove(g)     # remove to ensure we "return each"
             if self.markAsUnreachableAndAddToTried(g, tried):
-                guards.remove(g)
+                remaining.remove(g)
 
     def markAsUnreachableAndAddToTried(self, guard, triedList):
         if not self.wasNotPossibleToConnect(guard):

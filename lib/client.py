@@ -347,10 +347,14 @@ class StatePrimaryGuards(object):
     def next(self, context):
         #print("StatePrimaryGuards - NEXT")
 
+        # For each entry, if it was not possible to connect to it, mark the
+        # entry as unreachable and add it to TRIED_GUARDS.
+        if self._turn > -1:
+            lastTried, _ = returnEachEntryInTurn(context._primaryGuards, self._turn-1)
+            self.markAsUnreachableAndAddToTried(lastTried, self._triedGuards)
+
         context._lastReturn, self._turn = returnEachEntryInTurn(context._primaryGuards,
                 self._turn)
-
-        context.markAsUnreachableAndAddToTriedList(context._primaryGuards)
 
         if not context.checkTriedTreshold(context._triedGuards):
             return

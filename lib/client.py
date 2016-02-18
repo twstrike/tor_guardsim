@@ -351,7 +351,7 @@ class StatePrimaryGuards(object):
         # entry as unreachable and add it to TRIED_GUARDS.
         if self._turn > -1:
             lastTried, _ = returnEachEntryInTurn(context._primaryGuards, self._turn-1)
-            self.markAsUnreachableAndAddToTried(lastTried, self._triedGuards)
+            context.markAsUnreachableAndAddToTried(lastTried, context._triedGuards)
 
         context._lastReturn, self._turn = returnEachEntryInTurn(context._primaryGuards,
                 self._turn)

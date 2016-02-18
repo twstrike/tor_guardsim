@@ -99,6 +99,7 @@ def trivialSimulation(args):
 
     print("Total simulation time:    %d" % simtime.now())
 
+
 if __name__ == '__main__':
     args = options.makeOptionsParser()
     trivialSimulation(args)

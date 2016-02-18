@@ -17,9 +17,12 @@ from py3hax import *
 
 
 def compareNodeBandwidth(this, other):
-    if this.bandwidth < other.bandwidth: return -1
-    elif this.bandwidth > other.bandwidth: return 1
-    else: return 0
+    if this.bandwidth < other.bandwidth:
+        return -1
+    elif this.bandwidth > other.bandwidth:
+        return 1
+    else:
+        return 0
 
 
 class Node(object):
@@ -55,7 +58,7 @@ class Node(object):
         self._down_since = 0
 
         #####################
-        #--- From node_t ---#
+        # --- From node_t ---#
         #####################
 
         # As far as we know, is this OR currently running?
@@ -88,16 +91,16 @@ class Node(object):
         # XXXXX come back up.  I wonder if that matters for us.
 
         if not self._dead:
-          if self._down_since and not self._down_since + recoveryTime * random.random() < simtime.now():
-            return
+            if self._down_since and not self._down_since + recoveryTime * random.random() < simtime.now():
+                return
 
-          self._up = random.random() < self._reliability
-          if self._up:
-            self._down_since = None
-          elif self._down_since:
-            return
-          else:
-            self._down_since = simtime.now()
+            self._up = random.random() < self._reliability
+            if self._up:
+                self._down_since = None
+            elif self._down_since:
+                return
+            else:
+                self._down_since = simtime.now()
 
     def kill(self):
         """Mark this node as completely off the network, until resurrect
@@ -137,10 +140,10 @@ def _randport(pfascistfriendly):
     if random.random() < pfascistfriendly:
         return random.choice([80, 443])
     else:
-        return random.randint(1,65535)
+        return random.randint(1, 65535)
+
 
 class Network(object):
-
     """Base class to represent a simulated Tor network.  Very little is
        actually simulated here: all we need is for guard nodes to come
        up and down over time.
@@ -148,6 +151,7 @@ class Network(object):
        In this simulation, we ignore bandwidth, and consider every
        node to be a guard.  This shouldn't affect the algorithm.
     """
+
     def __init__(self, num_nodes, pfascistfriendly=.3, pevil=0.5,
                  avgnew=1.5, avgdel=0.5, nodereliability=0.96):
 
@@ -163,11 +167,11 @@ class Network(object):
         self._nodereliability = nodereliability
 
         # a list of all the Nodes on the network, dead and alive.
-        self._wholenet = [ Node("node%d"%n,
-                                port=_randport(pfascistfriendly),
-                                evil=random.random() < pevil,
-                                reliability=nodereliability)
-                           for n in xrange(num_nodes) ]
+        self._wholenet = [Node("node%d" % n,
+                               port=_randport(pfascistfriendly),
+                               evil=random.random() < pevil,
+                               reliability=nodereliability)
+                          for n in xrange(num_nodes)]
         for node in self._wholenet:
             node.updateRunning()
 
@@ -182,7 +186,7 @@ class Network(object):
     # This seems unrealistic
     def new_consensus(self):
         """Return a list of the running guard nodes."""
-        return [ node for node in self._wholenet if node.isReallyUp() ]
+        return [node for node in self._wholenet if node.isReallyUp()]
 
     def do_churn(self):
         """Simulate churn: delete and add nodes from/to the network."""
@@ -201,8 +205,8 @@ class Network(object):
 
         # add nAdd new nodes.
         num_nodes = len(self._wholenet)
-        for n in xrange(self._total, self._total+nAdd):
-            node = Node("node%d"%n,
+        for n in xrange(self._total, self._total + nAdd):
+            node = Node("node%d" % n,
                         port=_randport(self._pfascistfriendly),
                         evil=random.random() < self._pevil,
                         reliability=self._nodereliability)
@@ -233,7 +237,6 @@ class Network(object):
         return up
 
 
-
 class _NetworkDecorator(object):
     """Decorator class for Network: wraps a network and implements all its
        methods by calling down to the base network.  We use these to
@@ -254,14 +257,18 @@ class _NetworkDecorator(object):
     def updateRunning(self):
         self._network.updateRunning()
 
+
 class FascistNetwork(_NetworkDecorator):
     """Network that blocks all connections except those to ports 80, 443"""
+
     def probe_node_is_up(self, node):
-        return (node.getPort() in [80,443] and
+        return (node.getPort() in [80, 443] and
                 self._network.probe_node_is_up(node))
+
 
 class EvilFilteringNetwork(_NetworkDecorator):
     """Network that blocks connections to non-evil nodes with P=pBlockGood"""
+
     def __init__(self, network, pBlockGood=1.0):
         super(EvilFilteringNetwork, self).__init__(network)
         self._pblock = pBlockGood
@@ -272,9 +279,11 @@ class EvilFilteringNetwork(_NetworkDecorator):
                 return False
         return self._network.probe_node_is_up(node)
 
+
 class SniperNetwork(_NetworkDecorator):
     """Network that does a DoS attack on a client's non-evil nodes with
        P=pKillGood after each connection."""
+
     def __init__(self, network, pKillGood=1.0):
         super(SniperNetwork, self).__init__(network)
         self._pkill = pKillGood
@@ -287,9 +296,11 @@ class SniperNetwork(_NetworkDecorator):
 
         return result
 
+
 class FlakyNetwork(_NetworkDecorator):
     """A network where all connections succeed only with probability
        'reliability', regardless of whether the node is up or down."""
+
     def __init__(self, network, reliability=0.9):
         super(FlakyNetwork, self).__init__(network)
         self._reliability = reliability
@@ -299,14 +310,17 @@ class FlakyNetwork(_NetworkDecorator):
             return False
         return self._network.probe_node_is_up(node)
 
+
 class DownNetwork(_NetworkDecorator):
     """A network where no connections succeed, regardless of whether
        the node is up or down. It assumes we can get a consensus, however."""
+
     def __init__(self, network):
         super(DownNetwork, self).__init__(network)
 
     def probe_node_is_up(self, node):
         return False
+
 
 class SlowRecoveryNetwork(_NetworkDecorator):
     """A network where nodes take an hour to recover."""
@@ -322,12 +336,14 @@ class SlowRecoveryNetwork(_NetworkDecorator):
 
 class SwitchingNetwork(_NetworkDecorator):
     """A network where the network randomly switches between all kinds noted above."""
+
     def __init__(self, network):
         super(SwitchingNetwork, self).__init__(network)
         self._real_network = network
 
     def _switch_networks(self):
-        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork, self._real_network, SlowRecoveryNetwork]
+        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork,
+                       self._real_network, SlowRecoveryNetwork]
         newNet = random.choice(allNetworks)
         if newNet == self._real_network:
             print("Network switched to real network")

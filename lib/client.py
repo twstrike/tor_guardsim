@@ -19,6 +19,7 @@ from guard import GetGuard
 
 import pprint
 
+
 class ExponentialTimer(object):
     """Implements an exponential timer using simulated time."""
 
@@ -79,7 +80,6 @@ class ClientParams(object):
                  RETRY_MULT=2,
                  PRIORITIZE_BANDWIDTH=True,
                  DISJOINT_SETS=False):
-
         # From asn's post and prop259.  This should be a consensus parameter.
         # It stores the number of guards in {U,DYS}TOPIC_GUARDLIST which we
         # (strongly) prefer connecting to above all others.  The ones which we
@@ -100,6 +100,7 @@ class ClientParams(object):
         self.GUARDS_TRY_TRESHOLD = 0.03
 
         self.GUARDS_FAILOVER_THRESHOLD = 0.02
+
 
 class Stats(object):
     """Contains information about the stats of several runs over potentially
@@ -170,7 +171,7 @@ class Client(object):
 
         self._stats = stats
 
-        # used guards
+        #  used guards
         self._usedGuards = []
 
         # All guards in the latest consensus
@@ -214,7 +215,7 @@ class Client(object):
         # Update BAD status for usedGuards
         for g in self._usedGuards:
             g._bad = not self.inLatestConsensus(g)
- 
+
     def markGuard(self, guard, up):
         guard.mark(up)
 
@@ -254,7 +255,7 @@ class Client(object):
 
         # XXX we should save used_guards and pass as parameter
         guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
-                self._ALL_GUARDS, self._ALL_DYSTOPIC)
+                             self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
         # XXX it means we keep trying different guards until we succeed to build
         # a circuit (even if the circuit failed by other reasons)
@@ -279,7 +280,7 @@ class Client(object):
                 # Copy used guards so it can be used in the next START
                 self._usedGuards = list(guardSelection._usedGuards)
 
-                return circuit # We want to break the loop
+                return circuit  # We want to break the loop
             else:
                 # XXX are we supposed to keep trying forever?
                 # What guarantees we will find something?
@@ -308,7 +309,7 @@ class Client(object):
                 guard._madeContact = True
         else:
             if not guard._madeContact:
-                pass # remove this guard
+                pass  # remove this guard
             elif not guard._unreachableSince:
                 guard._unreachableSince = now
                 guard._lastAttempted = now
@@ -321,7 +322,7 @@ class Client(object):
 
 def returnEachEntryInTurn(guards, turn):
     g = None
-    if len(guards) > turn+1:
+    if len(guards) > turn + 1:
         turn += 1
         g = guards[turn]
 
@@ -335,21 +336,22 @@ def returnEachEntryInTurnImNotSure(guards, context):
         if not context.wasNotPossibleToConnect(g):
             return g
 
+
 class StatePrimaryGuards(object):
     def __init__(self):
         self._turn = -1
 
     def next(self, context):
-        #print("StatePrimaryGuards - NEXT")
+        # print("StatePrimaryGuards - NEXT")
 
         # For each entry, if it was not possible to connect to it, mark the
         # entry as unreachable and add it to TRIED_GUARDS.
         if self._turn > -1:
-            lastTried, _ = returnEachEntryInTurn(context._primaryGuards, self._turn-1)
+            lastTried, _ = returnEachEntryInTurn(context._primaryGuards, self._turn - 1)
             context.markAsUnreachableAndAddToTried(lastTried, context._triedGuards)
 
         context._lastReturn, self._turn = returnEachEntryInTurn(context._primaryGuards,
-                self._turn)
+                                                                self._turn)
 
         if not context.checkTriedTreshold(context._triedGuards):
             return
@@ -364,20 +366,20 @@ class StateTryUtopic(object):
         self._remaining = []
 
     def next(self, context):
-        #print("StateTryUtopic - NEXT")
+        # print("StateTryUtopic - NEXT")
 
-        # XXX This should add back to REMAINING_UTOPIC_GUARDS
+        #  XXX This should add back to REMAINING_UTOPIC_GUARDS
         # When are they taken from REMAINING_UTOPIC_GUARDS?
         context.moveOldTriedGuardsToRemainingList()
 
-        # XXX When are USED_GUARDS removed from PRIMARY_GUARDS?
+        #  XXX When are USED_GUARDS removed from PRIMARY_GUARDS?
         # Is not PRIMARY_GUARDS built from USED_GUARDS preferably?
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
 
         # For each entry, if it was not possible to connect to it, mark the
         # entry as unreachable and add it to TRIED_GUARDS.
         if self._turn > -1:
-            lastTried, _ = returnEachEntryInTurn(guards, self._turn-1)
+            lastTried, _ = returnEachEntryInTurn(guards, self._turn - 1)
             context.markAsUnreachableAndAddToTried(lastTried, context._triedGuards)
 
         context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
@@ -389,11 +391,11 @@ class StateTryUtopic(object):
                                      context._utopicGuards, context.STATE_TRY_DYSTOPIC):
             return
 
-	# Return each entry from REMAINING_UTOPIC_GUARDS using
-  	# NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-  	# to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
-  	# unreachable and add it to TRIED_GUARDS.
-	# XXX Does it mean if we have something to return by this point,
+        # Return each entry from REMAINING_UTOPIC_GUARDS using
+        #  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
+        #  to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
+        # unreachable and add it to TRIED_GUARDS.
+        # XXX Does it mean if we have something to return by this point,
         # we should not proceed?
         # I'll assume so.
         if context._lastReturn:
@@ -422,7 +424,7 @@ class StateTryDystopic(object):
         self._remaining = []
 
     def next(self, context):
-        #print("StateTryDystopic - NEXT")
+        # print("StateTryDystopic - NEXT")
 
         context.moveOldTriedDystopicGuardsToRemainingList()
 
@@ -442,7 +444,7 @@ class StateTryDystopic(object):
         # NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
         # to it, remove the entry from REMAINING_DYSTOPIC_GUARDS, mark it as
         # unreachable and add it to TRIED_DYSTOPIC_GUARDS.
-	# XXX Does it mean if we have something to return by this point,
+        # XXX Does it mean if we have something to return by this point,
         # we should not proceed?
         # I'll assume so.
         if context._lastReturn:
@@ -469,24 +471,25 @@ class StateRetryOnly(object):
         self._turn = -1
 
     def next(self, context):
-        #print("StateRetryOnly - NEXT")
+        # print("StateRetryOnly - NEXT")
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key=lambda g: g._lastTried)
 
         context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
+
 class ChooseGuardAlgorithm(object):
     def __repr__(self):
         vals = vars(self)
-        filtered = { k: vals[k] for k in [
+        filtered = {k: vals[k] for k in [
             "_hasFinished", "_state", "_previousState", "_primaryGuards", "_triedGuards"]
-        }
+                    }
         return pprint.pformat(filtered, indent=4, width=1)
 
     def __init__(self, net, params):
         self._net = net
         self._params = params
-        
+
         self._primaryGuards = []
         self._guardsInConsensus = []
         self._dystopicGuardsInConsensus = []
@@ -503,7 +506,8 @@ class ChooseGuardAlgorithm(object):
     def hasFinished(self):
         return self._hasFinished
 
-    def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus, selectDirGuards = False):
+    def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus,
+              selectDirGuards=False):
         self._hasFinished = False
         self._usedGuards = usedGuards
 
@@ -535,7 +539,7 @@ class ChooseGuardAlgorithm(object):
     def transitionTo(self, state):
         # return self.transitionOnNextCall(state)
         self.transitionImmediatelyTo(state)
-        return False # should not continue execution
+        return False  # should not continue execution
 
     def transitionOnNextCall(self, state):
         print("! Transitioned to %s" % state)
@@ -592,7 +596,7 @@ class ChooseGuardAlgorithm(object):
 
     def wasNotPossibleToConnect(self, guard):
         return guard._unreachableSince != None
-        #return guard._madeContact == False
+        # return guard._madeContact == False
 
     def markAsUnreachable(self, guard):
         if not guard._unreachableSince:
@@ -628,10 +632,10 @@ class ChooseGuardAlgorithm(object):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
 
     def transitionToPreviousStateOrTryUtopic(self):
-            if self._previousState:
-                return self.transitionTo(self._previousState)
-            else:
-                return self.transitionTo(self.STATE_TRY_UTOPIC)
+        if self._previousState:
+            return self.transitionTo(self._previousState)
+        else:
+            return self.transitionTo(self.STATE_TRY_UTOPIC)
 
     def end(self, guard):
         # XXX Why?
@@ -673,7 +677,7 @@ class ChooseGuardAlgorithm(object):
 
     # XXX This is slow
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
-        #This is not taking into account the remaining dystopic guards. Is that okay?
+        # This is not taking into account the remaining dystopic guards. Is that okay?
         used = list(usedGuards)
         remaining = list(remainingUtopic)
         while len(self._primaryGuards) < nPrimaryGuards:
@@ -693,7 +697,7 @@ class ChooseGuardAlgorithm(object):
             while usedGuards:
                 guard = usedGuards.pop(0)
 
-                #TODO: What if is a bad guard? whatcha gonna do?
+                # TODO: What if is a bad guard? whatcha gonna do?
                 if guard not in self._primaryGuards and guard in self._guardsInConsensus:
                     return guard
         else:

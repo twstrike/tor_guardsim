@@ -3,19 +3,19 @@
 set -xe
 
 # vanilla
-#./plot --legacy
-#./plot
-#
-## Fascist network
-#./plot --fascist-firewall --legacy
-#./plot --fascist-firewall
-#
-## Flaky
-#./plot --flaky-network --legacy
-#./plot --flaky-network
-#
-## Evil
-#./plot --evil-filtering --legacy
+./plot --legacy
+./plot
+
+# Fascist network
+./plot --fascist-firewall --legacy
+./plot --fascist-firewall
+
+# Flaky
+./plot --flaky-network --legacy
+./plot --flaky-network
+
+# Evil
+./plot --evil-filtering --legacy
 ./plot --evil-filtering
 
 # Sniper

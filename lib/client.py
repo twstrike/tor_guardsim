@@ -567,11 +567,8 @@ class ChooseGuardAlgorithm(object):
         guards = list(remaining)  # makes a copy
         while len(guards) > 0:
             g = self.nextByBandwidth(guards)
-            guards.remove(g)
-
             if self.markAsUnreachableAndRemoveAndAddToTriedList(g, tried):
-                # XXX what guarantees it will be in tried?
-                tried.remove(g)
+                guards.remove(g)
 
     def markAsUnreachableAndRemoveAndAddToTriedList(self, guard, triedList):
         if not self.wasNotPossibleToConnect(guard):

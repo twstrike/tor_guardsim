@@ -258,7 +258,7 @@ class Client(object):
         if self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD:
             return g
 
-        return self.connectAndRegisterStatus(guard)
+        return self.connectAndRegisterStatus(g)
 
     # XXX What is this supposed to do? Build the circuit data structure, OR 
     # connect to the circuit?

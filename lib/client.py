@@ -188,6 +188,11 @@ class Client(object):
         # to build a circuit, in seconds
         self._BUILD_CIRCUIT_TIMEOUT = 30
 
+        # XXX What is buildCircuitWith()?
+        # Given the appendix, if this is False the success rate is 0%
+        # When we cant connect to the first guard we try.
+        self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD = True
+
         # At bootstrap, we get a new consensus
         self.updateGuardLists()
 
@@ -240,14 +245,37 @@ class Client(object):
 
         return up
 
+    def connectAndRegisterStatus(self, guard):
+        succeeded = self.connectToGuard(guard)
+        self.entryGuardRegisterConnectStatus(guard, succeeded)
+        return succeeded
+
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
 
         g = self.getGuard()
-        succeeded = self.connectToGuard(g)
-        self.entryGuardRegisterConnectStatus(g, succeeded)
 
-        return succeeded
+        if self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD:
+            return g
+
+        return self.connectAndRegisterStatus(guard)
+
+    # XXX What is this supposed to do? Build the circuit data structure, OR 
+    # connect to the circuit?
+    def buildCircuitWith(self, guard):
+        # Build the circuit data structure.
+        # In the simulation we only require the guard to exists. No middle or
+        # exit node, so the guard is our circuit.
+        circuit = guard
+
+        if not self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD:
+            return circuit
+
+        # Otherwise, connecting to the circuit is part of building it
+        if self.connectAndRegisterStatus(guard):
+            return circuit
+        else:
+            return None 
 
     # XXX This is choose_random_entry_impl in tor
     def getGuard(self):
@@ -285,14 +313,6 @@ class Client(object):
                 # XXX are we supposed to keep trying forever?
                 # What guarantees we will find something?
                 return False
-
-    # XXX What is this supposed to do? Build the circuit data structure, OR
-    # connect to the circuit?
-    def buildCircuitWith(self, guard):
-        # Build the circuit data structure.
-        # In the simulation we only require the guard to exists. No middle or
-        # exit node, so the guard is our circuit
-        return guard
 
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
         now = simtime.now()

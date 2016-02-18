@@ -239,12 +239,17 @@ class Client(object):
 
         return up
 
-    # XXX There used to be getGuard (choose_random_entry_impl in tor)
-    # but this new structure seems to make it harder
-    # Should it be the while? Is so, when should it stop?
     def buildCircuit(self):
         """Try to build a circuit; return true if we succeeded."""
 
+        g = self.getGuard()
+        succeeded = self.connectToGuard(g)
+        self.entryGuardRegisterConnectStatus(g, succeeded)
+
+        return succeeded
+
+    # XXX This is choose_random_entry_impl in tor
+    def getGuard(self):
         guardSelection = ChooseGuardAlgorithm(self._net, self._p)
 
         # XXX we should save used_guards and pass as parameter
@@ -273,6 +278,7 @@ class Client(object):
 
                 # Copy used guards so it can be used in the next START
                 self._usedGuards = list(guardSelection._usedGuards)
+
                 return circuit # We want to break the loop
             else:
                 # XXX are we supposed to keep trying forever?
@@ -284,19 +290,8 @@ class Client(object):
     def buildCircuitWith(self, guard):
         # Build the circuit data structure.
         # In the simulation we only require the guard to exists. No middle or
-        # exit node.
-        if not guard: return None
-
-        # Connect to the circuit
-        # This is the semantics of buildCircuit in this simulation
-        success = self.connectToGuard(guard)
-        self.entryGuardRegisterConnectStatus(guard, success)
-
-        # XXX If this is buildCircuit, success = False means we failed to build
-        # the circuit, but we are not terminating the While, so it will never
-        # be reported
-
-        return success
+        # exit node, so the guard is our circuit
+        return guard
 
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
         now = simtime.now()
@@ -539,16 +534,16 @@ class ChooseGuardAlgorithm(object):
     # Immediately, or on the next call to NEXT?
     def transitionTo(self, state):
         # return self.transitionOnNextCall(state)
-        return self.transitionImmediatelyTo(state)
+        self.transitionImmediatelyTo(state)
+        return False # should not continue execution
 
     def transitionOnNextCall(self, state):
         print("! Transitioned to %s" % state)
         self._state = state
-        return False # should not continue execution
 
     def transitionImmediatelyTo(self, state):
         self.transitionOnNextCall(state)
-        return self._state.next(self)
+        self._state.next(self)
 
     def nextGuard(self):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)

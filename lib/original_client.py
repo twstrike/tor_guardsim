@@ -153,6 +153,7 @@ class Client(object):
 
         return (liveEntryGuards, False)
 
+    # XXX This is choose_random_entry_impl in tor
     def getGuard(self):
         return self.chooseRandomEntryImpl(False)
 

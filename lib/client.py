@@ -567,10 +567,10 @@ class ChooseGuardAlgorithm(object):
         guards = list(remaining)  # makes a copy
         while len(guards) > 0:
             g = self.nextByBandwidth(guards)
-            if self.markAsUnreachableAndRemoveAndAddToTriedList(g, tried):
+            if self.markAsUnreachableAndAddToTried(g, tried):
                 guards.remove(g)
 
-    def markAsUnreachableAndRemoveAndAddToTriedList(self, guard, triedList):
+    def markAsUnreachableAndAddToTried(self, guard, triedList):
         if not self.wasNotPossibleToConnect(guard):
             return None
 
@@ -580,11 +580,11 @@ class ChooseGuardAlgorithm(object):
 
     def markAsUnreachableAndAddToTriedList(self, guards):
         for pg in guards:
-            self.markAsUnreachableAndRemoveAndAddToTriedList(pg, self._triedGuards)
+            self.markAsUnreachableAndAddToTried(pg, self._triedGuards)
 
     def markDystopicAsUnreachableAndAddToTriedList(self, guards):
         for pg in guards:
-            self.markAsUnreachableAndRemoveAndAddToTriedList(pg, self._triedDystopicGuards)
+            self.markAsUnreachableAndAddToTried(pg, self._triedDystopicGuards)
 
     def wasNotPossibleToConnect(self, guard):
         return guard._unreachableSince != None

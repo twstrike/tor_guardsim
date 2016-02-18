@@ -688,13 +688,7 @@ class ChooseGuardAlgorithm(object):
         remaining = list(remainingUtopic)
         while len(self._primaryGuards) < nPrimaryGuards:
             g = self._nextPrimaryGuard(used, remaining)
-
-            # From proposal:
-            # If any PRIMARY_GUARDS have become bad, remove the guard from
-            # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
-            # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
-            if not g or g._bad: continue
-
+            if not g: continue
             self._primaryGuards.append(g)
 
     # XXX This is slow
@@ -703,8 +697,12 @@ class ChooseGuardAlgorithm(object):
             while usedGuards:
                 guard = usedGuards.pop(0)
 
-                # TODO: What if is a bad guard? whatcha gonna do?
-                if guard not in self._primaryGuards and guard in self._guardsInConsensus:
+            # From proposal §2.2.5:
+            # If any PRIMARY_GUARDS have become bad, remove the guard from
+            # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
+            # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
+            # ... so we just don't add it.
+                if not guard._bad and guard not in self._primaryGuards and guard in self._guardsInConsensus:
                     return guard
 
         # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with

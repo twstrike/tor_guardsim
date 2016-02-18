@@ -340,11 +340,17 @@ class Client(object):
                 guard._lastAttempted = now
 
 
+# XXX On current tor, this only returns LIVE guards.
+# Which means not unreachable or ready to be retired
+# See: tor.entry_is_live(g)
 def returnEachEntryInTurn(guards, turn):
     g = None
     if len(guards) > turn + 1:
         turn += 1
         g = guards[turn]
+
+    #if not tor.entry_is_live(g):
+    #    g, turn = returnEachEntryInTurn(guards, turn+1)
 
     return (g, turn)
 
@@ -687,10 +693,9 @@ class ChooseGuardAlgorithm(object):
         self.giveOneMoreChanceTo(self._triedDystopicGuards, self._remainingDystopicGuards)
 
     def filterGuards(self, guards, selectDirGuards, excludeNodes):
-        # XXX they should be entry_is_live(g)
-
-        liveGuards = [g for g in guards if not g._node in excludeNodes and tor.entry_is_live(g)]
-        return [g for g in liveGuards if g_isDirectoryCache] if selectDirGuards else liveGuards
+        guardsWithoutExluded = [g for g in guards if not g._node in excludeNodes]
+        guards = [g for g in liveGuards if g_isDirectoryCache] if selectDirGuards else guardsWithoutExluded
+        return set(guards)
 
     def _getGuards(self, selectDirGuards, excludeNodesSet):
         return self.filterGuards(self._guardsInConsensus, selectDirGuards, excludeNodesSet)

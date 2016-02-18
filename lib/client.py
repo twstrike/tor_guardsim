@@ -722,11 +722,11 @@ class ChooseGuardAlgorithm(object):
             while usedGuards:
                 guard = usedGuards.pop(0)
 
-            # From proposal §2.2.5:
-            # If any PRIMARY_GUARDS have become bad, remove the guard from
-            # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
-            # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
-            # ... so we just don't add it.
+                # From proposal §2.2.5:
+                # If any PRIMARY_GUARDS have become bad, remove the guard from
+                # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
+                # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
+                # ... so we just don't add it.
                 if guard not in self._primaryGuards and not guard._bad:
                     return guard
 
@@ -734,11 +734,14 @@ class ChooseGuardAlgorithm(object):
         # new consensus arrives via the update() function is much more time
 
         # XXX should we remove the chosen from remaining?
+        # XXX also, if it is in remaining we dont care if its already in PRIMARY_GUARDS
+        # o if it is bad. We just add.
+        return random.choice(remainingUtopic)
+
         # choose weighted by BW (disabled for performance)
         # we can optimize by calculating the bw weights only once (outside
         # of this function)
         # return tor.choose_node_by_bandwidth_weights(remainingUtopic)
-        return random.choice(remainingUtopic)
 
     # we should first check if it
     #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried

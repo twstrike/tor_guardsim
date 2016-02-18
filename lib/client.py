@@ -612,14 +612,18 @@ class ChooseGuardAlgorithm(object):
         treshold = self._params.GUARDS_TRY_TRESHOLD * len(guards)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
         if len(tried) > treshold:
-            return self.transitionTo(self.STATE_RETRY_ONLY)
+            self.transitionTo(self.STATE_RETRY_ONLY)
+            # Treshold Failed
+            return False
 
         return True
 
     # XXX should we abort the current state if this transitions to another state?
     def checkFailover(self, triedGuards, guards, nextState):
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
-            return self.transitionTo(nextState)
+            self.transitionTo(nextState)
+            # Treshold Failed
+            return False
 
         return True
 
@@ -636,10 +640,10 @@ class ChooseGuardAlgorithm(object):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
 
     def transitionToPreviousStateOrTryUtopic(self):
-        if self._previousState:
-            return self.transitionTo(self._previousState)
-        else:
-            return self.transitionTo(self.STATE_TRY_UTOPIC)
+            if self._previousState:
+                self.transitionTo(self._previousState)
+            else:
+                self.transitionTo(self.STATE_TRY_UTOPIC)
 
     def end(self, guard):
         # XXX Why?

@@ -286,7 +286,7 @@ class Client(object):
                 # What guarantees we will find something?
                 return False
 
-    # XXX What is this supposed to do? Build the circuit data structure, OR 
+    # XXX What is this supposed to do? Build the circuit data structure, OR
     # connect to the circuit?
     def buildCircuitWith(self, guard):
         # Build the circuit data structure.
@@ -535,6 +535,8 @@ class ChooseGuardAlgorithm(object):
 
     # XXX This is slow
     def nextByBandwidth(self, guards):
+        # XXX when we pick a guard from remainingUtopic, as example, should we remove it
+        # from the remaining list?
         return tor.choose_node_by_bandwidth_weights(guards)
 
     # XXX How should the transition happen?
@@ -666,16 +668,15 @@ class ChooseGuardAlgorithm(object):
 
     def filterGuards(self, guards, selectDirGuards, excludeNodes):
         # XXX they should be entry_is_live(g)
+
         liveGuards = [g for g in guards if not g._node in excludeNodes and tor.entry_is_live(g)]
         return [g for g in liveGuards if g_isDirectoryCache] if selectDirGuards else liveGuards
-    
+
     def _getGuards(self, selectDirGuards, excludeNodesSet):
-        guards = self.filterGuards(self._guardsInConsensus, selectDirGuards, excludeNodesSet)
-        return set(guards)
+        return self.filterGuards(self._guardsInConsensus, selectDirGuards, excludeNodesSet)
 
     def _filterDystopicGuards(self, selectDirGuards, excludeNodesSet):
-        guards = self.filterGuards(self._dystopicGuardsInConsensus, selectDirGuards, excludeNodesSet)
-        return set(guards)
+        return self.filterGuards(self._dystopicGuardsInConsensus, selectDirGuards, excludeNodesSet)
 
     def _filterDystopicGuardsFrom(self, guards):
         return set([dg for dg in guards if dg._node.seemsDystopic()])
@@ -705,13 +706,16 @@ class ChooseGuardAlgorithm(object):
                 # TODO: What if is a bad guard? whatcha gonna do?
                 if guard not in self._primaryGuards and guard in self._guardsInConsensus:
                     return guard
-        else:
-            # XXX should we remove the chosen from remaining?
-            # choose weighted by BW (disabled for performance)
-            # we can optimize by calculating the bw weights only once (outside
-            # of this function)
-            # return tor.choose_node_by_bandwidth_weights(remainingUtopic)
-            return random.choice(remainingUtopic)
+
+        # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
+        # new consensus arrives via the update() function is much more time
+
+        # XXX should we remove the chosen from remaining?
+        # choose weighted by BW (disabled for performance)
+        # we can optimize by calculating the bw weights only once (outside
+        # of this function)
+        # return tor.choose_node_by_bandwidth_weights(remainingUtopic)
+        return random.choice(remainingUtopic)
 
     # we should first check if it
     #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried

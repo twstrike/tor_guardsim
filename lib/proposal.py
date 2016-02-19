@@ -31,6 +31,9 @@ class StatePrimaryGuards(object):
     def next(self, context):
         # print("StatePrimaryGuards - NEXT")
 
+        # XXX With this for (and ignoring unreachable) we wont be able to retry
+        # them when we transition to this state.
+        # This is why test_NEXT_should_retry_PRIMARY_GUARDS is broken
         for g in context._primaryGuards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g

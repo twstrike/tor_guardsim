@@ -296,7 +296,7 @@ class ChooseGuardAlgorithm(object):
     # XXX should we abort the current state if this transitions to another state?
     def checkTriedThreshold(self, guards):
         timeWindow = simtime.now() - self._params.GUARDS_TRY_THRESHOLD_TIME * 60
-        threshold = self._params.GUARDS_TRY_THRESHOLD * len(guards)
+        threshold = self._params.GUARDS_TRY_THRESHOLD * len(self._guards)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
 
         print("tried = %s, threshold = %s" % (len(tried), threshold))

@@ -347,7 +347,7 @@ class ChooseGuardAlgorithm(object):
         for g in guards:
             if g._unreachableSince < timeWindow:
                 g._canRetry = True
-                remaining.append(g)
+                remaining.add(g)
 
     def moveOldTriedGuardsToRemainingList(self):
         self.giveOneMoreChanceTo(self._triedGuards, self._remainingUtopicGuards)

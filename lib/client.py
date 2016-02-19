@@ -92,10 +92,10 @@ class ClientParams(object):
         self.PRIMARY_GUARDS_RETRY_INTERVAL = 3
 
         # Time (in minutes)
-        self.GUARDS_TRY_TRESHOLD_TIME = 120
+        self.GUARDS_TRY_THRESHOLD_TIME = 120
 
-        # Percentage of total guards in the latest consensus we want to try in GUARDS_TRY_TRESHOLD_TIME minutes
-        self.GUARDS_TRY_TRESHOLD = 0.03
+        # Percentage of total guards in the latest consensus we want to try in GUARDS_TRY_THRESHOLD_TIME minutes
+        self.GUARDS_TRY_THRESHOLD = 0.03
 
         self.GUARDS_FAILOVER_THRESHOLD = 0.02
 

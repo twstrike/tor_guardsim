@@ -90,7 +90,7 @@ class TestProposal259(unittest.TestCase):
 
     def test_STATE_PRIMARY_GUARD_transitions_to_STATE_RETRY_ONLY_when_tried_threshold_fails(self):
         simtime.advanceTime(50)
-        used = [createGuard(unreachableSince = (n+1)*10, lastTried = (n+1)*10) for n in xrange(3)]
+        used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]
         allDystopic = []
 
         params = client.ClientParams()
@@ -106,7 +106,7 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(chosen, used[0]) # Should return the older
 
     def test_STATE_PRIMARY_GUARD_transitions_to_TRY_UTOPIC(self):
-        used = [createGuard(unreachableSince = (n+1)*10, lastTried = (n+1)*10) for n in xrange(3)]
+        used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]
         used.append(createGuard())
         allDystopic = []
 
@@ -126,3 +126,4 @@ class TestProposal259(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

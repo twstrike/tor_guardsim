@@ -21,6 +21,11 @@ import guard
 #guard = guardSelection.nextGuard()
 #guardSelection.end(guard)
 
+def triedAndFailed(g, when):
+    g._lastTried = when
+    g._unreachableSince = when
+    return g
+
 def createGuard(unreachableSince=None, lastTried=None):
     node = tornet.Node("some node", random.randint(1, 65535))
     g = guard.GetGuard(node)
@@ -31,7 +36,7 @@ def createGuard(unreachableSince=None, lastTried=None):
 class TestProposal259(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestProposal259, self).__init__(*args, **kwargs)
-        self.ALL_GUARDS = [createGuard() for n in xrange(10)]
+        self.ALL_GUARDS = [createGuard() for n in xrange(100)]
 
     def setUp(self):
         simtime.reset()
@@ -50,7 +55,7 @@ class TestProposal259(unittest.TestCase):
         expectedPrimary = [g for g in used if g != notInConsensus]
         self.assertEqual(algo._primaryGuards, expectedPrimary)
 
-    def test_STATE_PRIMARY_GUARD_should_prefer_reachable_guards(self):
+    def test_STATE_PRIMARY_GUARD_should_return_each_reachable_guard_in_turn(self):
         unreachableGuard = createGuard(unreachableSince = 10)
 
         used = [unreachableGuard, createGuard(), createGuard()]
@@ -63,8 +68,25 @@ class TestProposal259(unittest.TestCase):
         chosen = algo.nextGuard()
 
         self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
-        self.assertEqual(algo._triedGuards, [unreachableGuard])
+        self.assertEqual(algo._triedGuards, used[0:1])
         self.assertEqual(chosen, used[1])
+
+        # Failed to connect
+        triedAndFailed(used[1], 15)
+
+        chosen = algo.nextGuard()
+        self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
+        self.assertEqual(algo._triedGuards, used[0:2])
+        self.assertEqual(chosen, used[2])
+
+        # Failed to connect
+        triedAndFailed(used[2], 20)
+
+        chosen = algo.nextGuard()
+        self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
+        self.assertEqual(algo._triedGuards, used[0:3])
+        # XXX Should it really return NONE?
+        self.assertEqual(chosen, None)
 
     def test_STATE_PRIMARY_GUARD_transitions_to_STATE_RETRY_ONLY_when_tried_threshold_fails(self):
         simtime.advanceTime(50)
@@ -72,7 +94,7 @@ class TestProposal259(unittest.TestCase):
         allDystopic = []
 
         params = client.ClientParams()
-        params.GUARDS_TRY_THRESHOLD = 0.5
+        params.GUARDS_TRY_THRESHOLD = 0.02 # 2 guards
 
         algo = proposal.ChooseGuardAlgorithm(params)
         algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)

@@ -14,8 +14,8 @@
 ### Other
 - NUM_NEEDED = the number of entry guards that we want to select from GUARD_LIST to build LIVE_ENTRY_GUARDS.
 
-### ON_BOOTSTRAP (no existing guards) `(Should be Deprecated)`
-  1. Reloading_NEW_CONSENSUS -> Reloading_NEW_CONSENSUS
+### ON_BOOTSTRAP (no existing guards) `(Maybe need to be kept ??)`
+  1. RECEIVE_NEW_CONSENSUS
   2. From listed guards in ALL_GUARD_LIST:
     1. Choose 3 new guards that are both DIRECTORY_GUARDS and LIVE_ENTRY_GUARDS
     2. Add these new guards to GUARD_LIST

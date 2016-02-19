@@ -274,7 +274,7 @@ class ChooseGuardAlgorithm(object):
             return None
 
         self.markAsUnreachable(guard)
-        triedList.append(guard)
+        if not guard in triedList: triedList.append(guard)
         return guard
 
     def markAsUnreachableAndAddToTriedList(self, guards):

@@ -55,10 +55,12 @@
 ### NEXT algo
   1. USE the current Consensus to build an algo state machine contains USED_GUARDS, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus, selectDirGuards=False
   2. GetNext using StateMachine and try directly after , it may failover between
+  ``````
         StatePrimaryGuards,
         StateTryUtopic,
         StateTryDystopic,
         StateRetryOnly
+  ``````
      until we find a guard which is able to connect
 
 ### CHOOSE_RANDOM_ENTRYGUARD `(Should be Deprecated)`

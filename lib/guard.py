@@ -1,6 +1,7 @@
 _GUARDS = {}
 
 import random
+import pprint
 
 # Manage guard instances for us
 def GetGuard(node):

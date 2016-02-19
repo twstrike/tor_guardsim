@@ -15,3 +15,7 @@ def advanceTime(n):
     global _time
     assert n >= 0
     _time += n
+
+def reset():
+    _time = 0
+

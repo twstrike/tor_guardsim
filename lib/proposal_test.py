@@ -88,6 +88,55 @@ class TestProposal259(unittest.TestCase):
         # XXX Should it really return NONE?
         self.assertEqual(chosen, None)
 
+    def test_NEXT_should_retry_PRIMARY_GUARDS(self):
+        used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]
+        allDystopic = []
+
+        params = client.ClientParams()
+        params.GUARDS_TRY_THRESHOLD = 0.04 # 4 guards, so it does not fail
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+
+        chosen = algo.nextGuard()
+
+        self.assertEqual(algo._state, algo.STATE_TRY_DYSTOPIC)
+        self.assertEqual(algo._triedGuards, used)
+        # XXX Should it really return NONE?
+        self.assertEqual(chosen, None)
+
+        # At least one have been tried more than PRIMARY_GUARDS_RETRY_INTERVAL
+        # minutes ago
+        # XXX I think this will not work, because there will never be a previous
+        # state.
+        simtime.advanceTime(3*60 + 11)
+
+        chosen = algo.nextGuard()
+
+        # XXX FIXME
+        self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
+        self.assertEqual(chosen, used[0])
+
+        triedAndFailed(chosen)
+        chosen = algo.nextGuard()
+
+        # XXX FIXME
+        self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
+        self.assertEqual(chosen, used[1])
+
+        triedAndFailed(chosen)
+        chosen = algo.nextGuard()
+
+        # XXX FIXME
+        self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
+        self.assertEqual(chosen, used[2])
+
+        # All have failed during retry, so return to previous state
+        triedAndFailed(chosen)
+        chosen = algo.nextGuard()
+
+        # XXX FIXME
+        self.assertEqual(algo._state, algo.STATE_TRY_DYSTOPIC)
+
     def test_STATE_PRIMARY_GUARD_transitions_to_STATE_RETRY_ONLY_when_tried_threshold_fails(self):
         simtime.advanceTime(50)
         used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]

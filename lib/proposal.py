@@ -43,8 +43,7 @@ class StatePrimaryGuards(object):
                 return g
 
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
-        if not ok:
-            return fromTransition
+        if not ok: return fromTransition
 
         if context.allHaveBeenTried():
             return context.transitionToPreviousStateOrTryUtopic()
@@ -81,12 +80,12 @@ class StateTryUtopic(object):
         print("Will return %s" % context._lastReturn)
 
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
-        if not ok:
-            return fromTransition
+        if not ok: return fromTransition
 
-        if not context.checkFailover(context._triedGuards,
-                                     context._utopicGuards, context.STATE_TRY_DYSTOPIC):
-            return
+        ok, fromTransition = context.checkFailover(context._triedGuards,
+                                     context._utopicGuards,
+                                     context.STATE_TRY_DYSTOPIC)
+        if not ok: return fromTransition
 
         # Return each entry from REMAINING_UTOPIC_GUARDS using
         #  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
@@ -108,12 +107,12 @@ class StateTryUtopic(object):
 
         # one more time
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
-        if not ok:
-            return fromTransition
+        if not ok: return fromTransition
 
-        if not context.checkFailover(context._triedGuards,
-                                     context._utopicGuards, context.STATE_TRY_DYSTOPIC):
-            return
+        ok, fromTransition = context.checkFailover(context._triedGuards,
+                                     context._utopicGuards,
+                                     context.STATE_TRY_DYSTOPIC)
+        if not ok: return fromTransition
 
 
 class StateTryDystopic(object):
@@ -133,11 +132,10 @@ class StateTryDystopic(object):
         context.markDystopicAsUnreachableAndAddToTriedList(guards)
 
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
-        if not ok:
-            return fromTransition
+        if not ok: return fromTransition
 
-        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
-            return
+        ok, fromTransition = context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+        if not ok: return fromTransition
 
         # Return each entry from REMAINING_DYSTOPIC_GUARDS using
         # NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
@@ -159,11 +157,10 @@ class StateTryDystopic(object):
 
         # one more time
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
-        if not ok:
-            return fromTransition
+        if not ok: return fromTransition
 
-        if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
-            return
+        ok, fromTransition = context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
+        if not ok: return fromTransition
 
         # XXX what happens if no threshold fails?
         print("No threshold has failed")
@@ -318,7 +315,6 @@ class ChooseGuardAlgorithm(object):
         if not guard._unreachableSince:
             guard._unreachableSince = simtime.now()
 
-    # XXX should we abort the current state if this transitions to another state?
     def checkTriedThreshold(self, guards):
         timeWindow = simtime.now() - self._params.GUARDS_TRY_THRESHOLD_TIME * 60
         threshold = self._params.GUARDS_TRY_THRESHOLD * len(self._guards)
@@ -332,7 +328,6 @@ class ChooseGuardAlgorithm(object):
 
         return (True, None)
 
-    # XXX should we abort the current state if this transitions to another state?
     def checkFailover(self, triedGuards, guards, nextState):
         print("checkFailover: tried = %d, guards = %d " % (len(triedGuards), len(guards)))
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
@@ -342,13 +337,19 @@ class ChooseGuardAlgorithm(object):
         return (True, None)
 
     def checkTriedDystopicFailoverAndMarkAllAsUnreachable(self):
-        if self.checkFailover(self._triedDystopicGuards,
-                              self._dystopicGuards, self.STATE_RETRY_ONLY):
-            return True
+        ok, fromTransition = self.checkFailover(self._triedDystopicGuards,
+                              self._dystopicGuards, self.STATE_RETRY_ONLY)
+        if ok:
+            assert(fromTransition == None)
+            return (True, None)
 
+        # XXX should this happen BEFORE transitioning? If yes, we can not use checkFailover()
+        # OR we can not use transitionImmediatelyTo()
         guards = self._primaryGuards + self._triedGuards + self._triedDystopicGuards
         for g in guards:
             self.markAsUnreachable(g)
+
+        return (False, fromTransition)
 
     def allHaveBeenTried(self):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0

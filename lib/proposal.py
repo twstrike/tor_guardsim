@@ -52,9 +52,6 @@ class StatePrimaryGuards(object):
 
 
 class StateTryUtopic(object):
-    def __init__(self):
-        self._remaining = []
-
     def next(self, context):
         print("StateTryUtopic - NEXT")
 

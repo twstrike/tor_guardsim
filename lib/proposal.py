@@ -95,12 +95,10 @@ class StateTryUtopic(object):
                                      context.STATE_TRY_DYSTOPIC)
         if not ok: return fromTransition
 
+        # XXX what happens if no threshold fails?
+        print("No threshold has failed")
 
 class StateTryDystopic(object):
-    def __init__(self):
-        self._turn = -1
-        self._remaining = []
-
     def next(self, context):
         # print("StateTryDystopic - NEXT")
 
@@ -108,9 +106,11 @@ class StateTryDystopic(object):
 
         distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic()]
         guards = [g for g in distopicGuards if g not in context._primaryGuards]
-        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
 
-        context.markDystopicAsUnreachableAndAddToTriedList(guards)
+        # XXX should probably use entry_is_live()
+        for g in guards:
+            if not context.markAsUnreachableAndAddToTried(g, context._triedDystopicGuards):
+                return g
 
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
         if not ok: return fromTransition
@@ -122,19 +122,11 @@ class StateTryDystopic(object):
         # NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
         # to it, remove the entry from REMAINING_DYSTOPIC_GUARDS, mark it as
         # unreachable and add it to TRIED_DYSTOPIC_GUARDS.
-        # XXX Does it mean if we have something to return by this point,
-        # we should not proceed?
-        # I'll assume so.
-        if context._lastReturn:
-            return
-
-        if not self._remaining: self._remaining = list(context._remainingDystopicGuards)
-        if len(self._remaining) > 0:
-            g = context.nextByBandwidth(self._remaining)
-            self._remaining.remove(g)
-            context._lastReturn = g
-
-        context.removeUnavailableRemainingDystopicGuards()
+        # XXX There might be unavailable entries in _remainingUtopicGuards because
+        # they will only be removed if they have higher bandwidth
+        g = context.getFirstByBandwidthAndAddUnreachableTo(
+                context._remainingDystopicGuards, context._triedDystopicGuards)
+        if g: return g
 
         # one more time
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
@@ -146,18 +138,19 @@ class StateTryDystopic(object):
         # XXX what happens if no threshold fails?
         print("No threshold has failed")
 
-
 class StateRetryOnly(object):
-    def __init__(self):
-        self._turn = -1
-
     def next(self, context):
         # print("StateRetryOnly - NEXT")
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key=lambda g: g._lastTried)
 
-        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
+        # XXX should probably use entry_is_live()
+        for g in guards:
+            if context.wasNotPossibleToConnect(g): continue
+            return g
 
+        # XXX What if it exhaustes this list?
+        print("Exhausted tried list")
 
 class ChooseGuardAlgorithm(object):
     def __repr__(self):
@@ -253,10 +246,6 @@ class ChooseGuardAlgorithm(object):
 
         return g or self._lastReturn
 
-    def removeUnavailableRemainingDystopicGuards(self):
-        self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(
-            self._remainingDystopicGuards, self._triedDystopicGuards)
-
     def getFirstByBandwidthAndAddUnreachableTo(self, remaining, tried):
         guards = list(remaining)  # must be a list to use nextByBandwidth
         while guards:
@@ -267,17 +256,6 @@ class ChooseGuardAlgorithm(object):
             else:
                 return g
 
-    def removeUnavailableRemainingAndMarkUnreachableAndAddToTried(self, remaining, tried):
-        # XXX What is the difference of doing this by bandwidth if we are not
-        # returning anything?
-        # Does it make any difference if we are removing and marking in a different order?
-        guards = list(remaining)  # must be a list to use nextByBandwidth
-        while guards:
-            g = self.nextByBandwidth(guards)
-            guards.remove(g)     # remove to ensure we "return each"
-            if self.markAsUnreachableAndAddToTried(g, tried):
-                remaining.remove(g)
-
     def markAsUnreachableAndAddToTried(self, guard, triedList):
         if not self.wasNotPossibleToConnect(guard):
             return None
@@ -285,14 +263,6 @@ class ChooseGuardAlgorithm(object):
         self.markAsUnreachable(guard)
         if not guard in triedList: triedList.append(guard)
         return guard
-
-    def markAsUnreachableAndAddToTriedList(self, guards):
-        for pg in guards:
-            self.markAsUnreachableAndAddToTried(pg, self._triedGuards)
-
-    def markDystopicAsUnreachableAndAddToTriedList(self, guards):
-        for pg in guards:
-            self.markAsUnreachableAndAddToTried(pg, self._triedDystopicGuards)
 
     def wasNotPossibleToConnect(self, guard):
         return guard._unreachableSince != None

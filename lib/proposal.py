@@ -48,8 +48,8 @@ class StatePrimaryGuards(object):
         if context.allHaveBeenTried():
             return context.transitionToPreviousStateOrTryUtopic()
 
-        # XXX should never reach here
-
+        # XXX what happens if no threshold fails?
+        print("No threshold has failed")
 
 class StateTryUtopic(object):
     def next(self, context):

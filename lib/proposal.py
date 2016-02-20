@@ -257,7 +257,7 @@ class ChooseGuardAlgorithm(object):
     # when a new guard is successfully connectected to for the first time
     def markPrimaryGuardsForRetry(self):
         for g in self._primaryGuards:
-            g._canRetry = True
+            g.markForRetry()
 
     def nextGuard(self):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)

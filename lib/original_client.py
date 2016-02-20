@@ -55,7 +55,7 @@ class Client(object):
         # Whatever is not in the consensus, we dont know about
         # See nodelist_set_consensus()
         for guard in [g for g in self._GUARD_LIST if not g._listed]:
-            g._node._isRunning = False
+            g.node._isRunning = False
 
     def entryGuardsComputeStatus(self):
         self.entryGuardSetStatus()
@@ -64,7 +64,7 @@ class Client(object):
 
     def entryGuardSetStatus(self):
         for guard in self._GUARD_LIST:
-            hasReason = not guard._listed or not guard._node._isRunning
+            hasReason = not guard._listed or not guard.node._isRunning
 
             if not hasReason:
                 guard._badSince = None
@@ -126,7 +126,7 @@ class Client(object):
 
     def routerPickDirectoryServer(self):
         guards = [g for g in self._ALL_GUARDS if
-                  g not in self._GUARD_LIST and g._node._isRunning and g._isDirectoryCache]
+                  g not in self._GUARD_LIST and g.node._isRunning and g._isDirectoryCache]
         g = random.choice(guards)
 
         # XXX should we simulate the busy behaviot here?
@@ -194,7 +194,7 @@ class Client(object):
         up = self.probeGuard(guard)
 
         if up:
-            self._stats.addBandwidth(guard._node.bandwidth)
+            self._stats.addBandwidth(guard.node.bandwidth)
 
         return up
 

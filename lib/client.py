@@ -213,7 +213,7 @@ class Client(object):
             self._ALL_GUARDS.append(guard)
 
         # Filter dystopics
-        self._ALL_DYSTOPIC = [dg for dg in self._ALL_GUARDS if dg._node.seemsDystopic()]
+        self._ALL_DYSTOPIC = [dg for dg in self._ALL_GUARDS if dg.node.seemsDystopic()]
 
         # Update BAD status for usedGuards
         for g in self._usedGuards:

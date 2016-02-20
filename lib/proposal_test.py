@@ -24,6 +24,7 @@ import guard
 def triedAndFailed(g, when):
     g._lastTried = when
     g._unreachableSince = when
+    g._canRetry = False
     return g
 
 def createGuard(unreachableSince=None, lastTried=None):
@@ -112,29 +113,25 @@ class TestProposal259(unittest.TestCase):
 
         chosen = algo.nextGuard()
 
-        # XXX FIXME
         self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
         self.assertEqual(chosen, used[0])
 
-        triedAndFailed(chosen)
+        triedAndFailed(chosen, simtime.now()+10)
         chosen = algo.nextGuard()
 
-        # XXX FIXME
         self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
         self.assertEqual(chosen, used[1])
 
-        triedAndFailed(chosen)
+        triedAndFailed(chosen, simtime.now()+20)
         chosen = algo.nextGuard()
 
-        # XXX FIXME
         self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
         self.assertEqual(chosen, used[2])
 
         # All have failed during retry, so return to previous state
-        triedAndFailed(chosen)
+        triedAndFailed(chosen, simtime.now()+30)
         chosen = algo.nextGuard()
 
-        # XXX FIXME
         self.assertEqual(algo._state, algo.STATE_TRY_DYSTOPIC)
 
     def test_STATE_PRIMARY_GUARD_transitions_to_STATE_RETRY_ONLY_when_tried_threshold_fails(self):

@@ -26,6 +26,8 @@ def returnEachEntryInTurnImNotSure(guards, context):
         if not context.wasNotPossibleToConnect(g):
             return g
 
+def canRetry(g):
+    return g._canRetry
 
 class StatePrimaryGuards(object):
     def next(self, context):
@@ -35,7 +37,7 @@ class StatePrimaryGuards(object):
         # them when we transition to this state.
         # This is why test_NEXT_should_retry_PRIMARY_GUARDS is broken
         for g in context._primaryGuards:
-            if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
+            if canRetry(g) or not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g
 
         if not context.checkTriedThreshold(context._triedGuards):
@@ -242,9 +244,20 @@ class ChooseGuardAlgorithm(object):
         self.transitionOnNextCall(state)
         self._state.next(self)
 
+    # This similar to how tor currently does, but it mark them for retry
+    # when a new guard is successfully connectected to for the first time
+    def markPrimaryGuardsForRetry(self):
+        for g in self._primaryGuards:
+            g._canRetry = True
+
     def nextGuard(self):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
+            # XXX This is intended to retry the primary guards, but should we
+            # retry ALL of them if only one has been tried more than
+            # PRIMARY_GUARDS_RETRY_INTERVAL minutes ago?
+            # What if one of them has just been tried?
+            self.markPrimaryGuardsForRetry()
             self._previousState = self._state
             self.transitionTo(self.STATE_PRIMARY_GUARDS)
 

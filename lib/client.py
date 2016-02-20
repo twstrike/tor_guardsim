@@ -244,6 +244,8 @@ class Client(object):
         return up
 
     def connectAndRegisterStatus(self, guard):
+	if not guard: return False
+
         succeeded = self.connectToGuard(guard)
         self.entryGuardRegisterConnectStatus(guard, succeeded)
         return succeeded
@@ -264,14 +266,14 @@ class Client(object):
         # Build the circuit data structure.
         # In the simulation we only require the guard to exists. No middle or
         # exit node, so the guard is our circuit.
-        circuit = guard
+	if not guard: return None # no guard => no circuit
 
         if not self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD:
-            return circuit
+            return guard
 
         # Otherwise, connecting to the circuit is part of building it
         if self.connectAndRegisterStatus(guard):
-            return circuit
+            return guard # our circuit
         else:
             return None 
 

@@ -1,7 +1,9 @@
 # -*- coding: utf-8; -*-
 
-import random
 import simtime
+import tor
+
+import random
 import pprint
 
 # XXX On current tor, this only returns LIVE guards.
@@ -33,9 +35,9 @@ class StatePrimaryGuards(object):
     def next(self, context):
         # print("StatePrimaryGuards - NEXT")
 
-        # XXX With this for (and ignoring unreachable) we wont be able to retry
-        # them when we transition to this state.
-        # This is why test_NEXT_should_retry_PRIMARY_GUARDS is broken
+        # XXX using tor.entry_is_live(g) rather than wasNotPossibleToConnect()
+        # in markAsUnreachableAndAddToTried() whould remove the need of canRetry(),
+        # and also add the same retry conditions tor currently has
         for g in context._primaryGuards:
             if canRetry(g) or not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g

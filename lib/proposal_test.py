@@ -209,12 +209,22 @@ class TestProposal259(unittest.TestCase):
             self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
             self.assertEqual(chosen, g)
 
+        # Make sure the used guards are unlikely to be chosen, so we can assert
+        # they are still on REMAINING_UTOPIC_GUARDS
+        for g in used: g.node._bandwidth = 1
+
         # Should add the first two back to REMAINING_UTOPIC_GUARDS
         chosen = algo.nextGuard()
+        self.assertTrue(chosen not in used)
+        self.assertTrue(chosen in algo._remainingUtopicGuards)
+
+        # First two used will go back, because they were unreachable since time
+        # 10 and 20, and now we are at GUARDS_RETRY_TIME + 23
+        self.assertEqual(simtime.now(), 20*60 + 23)
+        self.assertEqual([g for g in used if g in algo._remainingUtopicGuards], used[0:2])
 
         self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
         self.assertEqual(algo._triedGuards, used) # the 4th is now tried
-        self.assertEqual([g for g in used if g in algo._remainingUtopicGuards], used[0:2])
 
 if __name__ == '__main__':
     unittest.main()

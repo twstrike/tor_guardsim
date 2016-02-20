@@ -84,8 +84,8 @@ class StateTryUtopic(object):
         #  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
         #  to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
         # unreachable and add it to TRIED_GUARDS.
-
-
+        # XXX There might be unavailable entries in _remainingUtopicGuards because
+        # they will only be removed if they have higher bandwidth
         g = context.getFirstByBandwidthAndAddUnreachableTo(context._remainingUtopicGuards,
                 context._triedGuards)
         if g: return g

@@ -17,5 +17,6 @@ def advanceTime(n):
     _time += n
 
 def reset():
+    global _time
     _time = 0
 

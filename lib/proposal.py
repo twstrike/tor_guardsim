@@ -42,11 +42,14 @@ class StatePrimaryGuards(object):
             if canRetry(g) or not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g
 
-        if not context.checkTriedThreshold(context._triedGuards):
-            return
+        ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
+        if not ok:
+            return fromTransition
 
         if context.allHaveBeenTried():
-            context.transitionToPreviousStateOrTryUtopic()
+            return context.transitionToPreviousStateOrTryUtopic()
+
+        # XXX should never reach here
 
 
 class StateTryUtopic(object):
@@ -77,8 +80,9 @@ class StateTryUtopic(object):
 
         print("Will return %s" % context._lastReturn)
 
-        if not context.checkTriedThreshold(context._triedGuards):
-            return
+        ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
+        if not ok:
+            return fromTransition
 
         if not context.checkFailover(context._triedGuards,
                                      context._utopicGuards, context.STATE_TRY_DYSTOPIC):
@@ -103,8 +107,9 @@ class StateTryUtopic(object):
         context.removeUnavailableRemainingUtopicGuards()
 
         # one more time
-        if not context.checkTriedThreshold(context._triedGuards):
-            return
+        ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
+        if not ok:
+            return fromTransition
 
         if not context.checkFailover(context._triedGuards,
                                      context._utopicGuards, context.STATE_TRY_DYSTOPIC):
@@ -127,8 +132,9 @@ class StateTryDystopic(object):
 
         context.markDystopicAsUnreachableAndAddToTriedList(guards)
 
-        if not context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards):
-            return
+        ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
+        if not ok:
+            return fromTransition
 
         if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
@@ -152,8 +158,9 @@ class StateTryDystopic(object):
         context.removeUnavailableRemainingDystopicGuards()
 
         # one more time
-        if not context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards):
-            return
+        ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
+        if not ok:
+            return fromTransition
 
         if not context.checkTriedDystopicFailoverAndMarkAllAsUnreachable():
             return
@@ -234,17 +241,17 @@ class ChooseGuardAlgorithm(object):
     # XXX How should the transition happen?
     # Immediately, or on the next call to NEXT?
     def transitionTo(self, state):
-        #self.transitionOnNextCall(state)
-        self.transitionImmediatelyTo(state)
-        return False  # should not continue execution
+        #return self.transitionOnNextCall(state)
+        return self.transitionImmediatelyTo(state)
 
     def transitionOnNextCall(self, state):
         print("! Transitioned to %s" % state)
         self._state = state
+        return None # will have one None to indicate a state transition
 
     def transitionImmediatelyTo(self, state):
         self.transitionOnNextCall(state)
-        self._state.next(self)
+        return self._state.next(self)
 
     # This similar to how tor currently does, but it mark them for retry
     # when a new guard is successfully connectected to for the first time
@@ -261,7 +268,7 @@ class ChooseGuardAlgorithm(object):
             # What if one of them has just been tried?
             self.markPrimaryGuardsForRetry()
             self._previousState = self._state
-            self.transitionTo(self.STATE_PRIMARY_GUARDS)
+            return self.transitionTo(self.STATE_PRIMARY_GUARDS)
 
         self._lastReturn = None
         g = self._state.next(self)
@@ -320,21 +327,19 @@ class ChooseGuardAlgorithm(object):
         print("tried = %s, threshold = %s" % (len(tried), threshold))
 
         if len(tried) > threshold:
-            self.transitionTo(self.STATE_RETRY_ONLY)
             # Threshold Failed
-            return False
+            return (False, self.transitionTo(self.STATE_RETRY_ONLY))
 
-        return True
+        return (True, None)
 
     # XXX should we abort the current state if this transitions to another state?
     def checkFailover(self, triedGuards, guards, nextState):
         print("checkFailover: tried = %d, guards = %d " % (len(triedGuards), len(guards)))
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
-            self.transitionTo(nextState)
             # Threshold Failed
-            return False
+            return (False, self.transitionTo(nextState))
 
-        return True
+        return (True, None)
 
     def checkTriedDystopicFailoverAndMarkAllAsUnreachable(self):
         if self.checkFailover(self._triedDystopicGuards,
@@ -349,10 +354,10 @@ class ChooseGuardAlgorithm(object):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
 
     def transitionToPreviousStateOrTryUtopic(self):
-            if self._previousState:
-                self.transitionTo(self._previousState)
-            else:
-                self.transitionTo(self.STATE_TRY_UTOPIC)
+        if self._previousState:
+            return self.transitionTo(self._previousState)
+        else:
+            return self.transitionTo(self.STATE_TRY_UTOPIC)
 
     def end(self, guard):
         # XXX Why?

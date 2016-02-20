@@ -23,7 +23,13 @@ import guard
 
 def triedAndFailed(g, when):
     g._lastTried = when
-    g._unreachableSince = when
+    g._unreachableSince = g._unreachableSince or when
+    g._canRetry = False
+    return g
+
+def triedAndSucceeded(g, when):
+    g._lastTried = when
+    g._unreachableSince = None
     g._canRetry = False
     return g
 
@@ -169,6 +175,46 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
         self.assertEqual(algo._triedGuards, used[0:-1])
         self.assertEqual(chosen, used[-1])
+
+    def test_STATE_TRY_UTOPIC_add_unreachable_back_to_remaining(self):
+        used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]
+        used.append(createGuard())
+        allDystopic = []
+
+        params = client.ClientParams()
+        # Make sure the threshold checks will not fail
+        params.GUARDS_TRY_THRESHOLD = 2
+        params.GUARDS_FAILOVER_THRESHOLD = 2
+
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+
+        chosen = algo.nextGuard()
+        self.assertEqual(chosen, used[-1])
+
+        self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
+        self.assertEqual(algo._triedGuards, used[0:-1]) # All but the last
+        self.assertEqual([g for g in used if g in algo._remainingUtopicGuards], [])
+
+        triedAndFailed(chosen, 40)
+        simtime.advanceTime(20*60 + 20) # GUARDS_RETRY_TIME + 20, has passed
+
+        # Will retry the PRIMARY_GUARDS because PRIMARY_GUARDS_RETRY_INTERVAL has
+        # passed. Note it is lesser than GUARDS_RETRY_TIME
+        primary = list(algo._primaryGuards)
+        for g in primary:
+            simtime.advanceTime(1)
+            chosen = algo.nextGuard()
+            triedAndFailed(chosen, simtime.now())
+            self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
+            self.assertEqual(chosen, g)
+
+        # Should add the first two back to REMAINING_UTOPIC_GUARDS
+        chosen = algo.nextGuard()
+
+        self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
+        self.assertEqual(algo._triedGuards, used) # the 4th is now tried
+        self.assertEqual([g for g in used if g in algo._remainingUtopicGuards], used[0:2])
 
 if __name__ == '__main__':
     unittest.main()

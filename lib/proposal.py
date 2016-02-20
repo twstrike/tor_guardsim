@@ -67,17 +67,10 @@ class StateTryUtopic(object):
         # Is not PRIMARY_GUARDS built from USED_GUARDS preferably?
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
 
-        print("Will chose from %s" % guards)
-
-        # For each entry, if it was not possible to connect to it, mark the
-        # entry as unreachable and add it to TRIED_GUARDS.
-        if self._turn > -1:
-            lastTried, _ = returnEachEntryInTurn(guards, self._turn - 1)
-            context.markAsUnreachableAndAddToTried(lastTried, context._triedGuards)
-
-        context._lastReturn, self._turn = returnEachEntryInTurn(guards, self._turn)
-
-        print("Will return %s" % context._lastReturn)
+        # XXX should probably use entry_is_live()
+        for g in guards:
+            if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
+                return g
 
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
         if not ok: return fromTransition
@@ -91,19 +84,11 @@ class StateTryUtopic(object):
         #  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
         #  to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
         # unreachable and add it to TRIED_GUARDS.
-        # XXX Does it mean if we have something to return by this point,
-        # we should not proceed?
-        # I'll assume so.
-        if context._lastReturn:
-            return
 
-        if not self._remaining: self._remaining = list(context._remainingUtopicGuards)
-        if len(self._remaining) > 0:
-            g = context.nextByBandwidth(self._remaining)
-            self._remaining.remove(g)
-            context._lastReturn = g
 
-        context.removeUnavailableRemainingUtopicGuards()
+        g = context.getFirstByBandwidthAndAddUnreachableTo(context._remainingUtopicGuards,
+                context._triedGuards)
+        if g: return g
 
         # one more time
         ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
@@ -272,13 +257,19 @@ class ChooseGuardAlgorithm(object):
 
         return g or self._lastReturn
 
-    def removeUnavailableRemainingUtopicGuards(self):
-        self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(
-            self._remainingUtopicGuards, self._triedGuards)
-
     def removeUnavailableRemainingDystopicGuards(self):
         self.removeUnavailableRemainingAndMarkUnreachableAndAddToTried(
             self._remainingDystopicGuards, self._triedDystopicGuards)
+
+    def getFirstByBandwidthAndAddUnreachableTo(self, remaining, tried):
+        guards = list(remaining)  # must be a list to use nextByBandwidth
+        while guards:
+            g = self.nextByBandwidth(guards)
+            guards.remove(g)     # remove to ensure we "return each"
+            if self.markAsUnreachableAndAddToTried(g, tried):
+                remaining.remove(g)
+            else:
+                return g
 
     def removeUnavailableRemainingAndMarkUnreachableAndAddToTried(self, remaining, tried):
         # XXX What is the difference of doing this by bandwidth if we are not

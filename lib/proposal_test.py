@@ -22,22 +22,22 @@ import guard
 #guardSelection.end(guard)
 
 def triedAndFailed(g, when):
+    g._lastAttempted = when
     g._lastTried = when
     g._unreachableSince = g._unreachableSince or when
     g._canRetry = False
     return g
 
 def triedAndSucceeded(g, when):
+    g._lastAttempted = when
     g._lastTried = when
     g._unreachableSince = None
     g._canRetry = False
     return g
 
-def createGuard(unreachableSince=None, lastTried=None):
+def createGuard():
     node = tornet.Node("some node", random.randint(1, 65535))
     g = guard.GetGuard(node)
-    g._unreachableSince = unreachableSince
-    g._lastTried = lastTried
     return g
 
 class TestProposal259(unittest.TestCase):
@@ -63,7 +63,7 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(algo._primaryGuards, expectedPrimary)
 
     def test_STATE_PRIMARY_GUARD_should_return_each_reachable_guard_in_turn(self):
-        unreachableGuard = createGuard(unreachableSince = 10)
+        unreachableGuard = triedAndFailed(createGuard(), 10)
 
         used = [unreachableGuard, createGuard(), createGuard()]
         allDystopic = []
@@ -79,19 +79,20 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(chosen, used[1])
 
         # Failed to connect
-        triedAndFailed(used[1], 15)
-
+        triedAndFailed(chosen, 15)
         chosen = algo.nextGuard()
+
         self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
         self.assertEqual(algo._triedGuards, used[0:2])
         self.assertEqual(chosen, used[2])
 
         # Failed to connect
-        triedAndFailed(used[2], 20)
-
+        triedAndFailed(chosen, 20)
         chosen = algo.nextGuard()
-        self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
+
         self.assertEqual(algo._triedGuards, used[0:3])
+
+        # self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
         # XXX Should it really return NONE?
         self.assertEqual(chosen, None)
 

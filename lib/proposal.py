@@ -63,7 +63,6 @@ class StateTryUtopic(object):
         # Is not PRIMARY_GUARDS built from USED_GUARDS preferably?
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
 
-        # XXX should probably use entry_is_live()
         for g in guards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g
@@ -107,7 +106,6 @@ class StateTryDystopic(object):
         distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic()]
         guards = [g for g in distopicGuards if g not in context._primaryGuards]
 
-        # XXX should probably use entry_is_live()
         for g in guards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedDystopicGuards):
                 return g
@@ -144,7 +142,6 @@ class StateRetryOnly(object):
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key=lambda g: g._lastTried)
 
-        # XXX should probably use entry_is_live()
         for g in guards:
             if context.wasNotPossibleToConnect(g): continue
             return g
@@ -156,7 +153,7 @@ class ChooseGuardAlgorithm(object):
     def __repr__(self):
         vals = vars(self)
         filtered = {k: vals[k] for k in [
-            "_hasFinished", "_state", "_previousState", "_primaryGuards", "_triedGuards"]
+            "_state", "_previousState", "_primaryGuards", "_triedGuards"]
                     }
         return pprint.pformat(filtered, indent=4, width=1)
 
@@ -175,14 +172,8 @@ class ChooseGuardAlgorithm(object):
         self.STATE_TRY_DYSTOPIC = StateTryDystopic()
         self.STATE_RETRY_ONLY = StateRetryOnly()
 
-    @property
-    def hasFinished(self):
-        return self._hasFinished
-
     def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus,
               selectDirGuards=False):
-        self._hasFinished = False
-
         # This is a reference on purpose, so we dont need to copy it back to the
         # client
         self._usedGuards = usedGuards
@@ -194,9 +185,6 @@ class ChooseGuardAlgorithm(object):
         self._guards = self._getGuards(selectDirGuards, excludeNodesSet)
         self._utopicGuards = self._guards
 
-        # XXX This is also slow. Takes ~5.385 seconds cummulative.
-        # We could split utopic/dystopic once per consensus received
-        # self._dystopicGuards = self._filterDystopicGuardsFrom(self._utopicGuards)
         self._dystopicGuards = self._filterDystopicGuards(selectDirGuards, excludeNodesSet)
 
         usedGuardsSet = set(usedGuards)
@@ -206,7 +194,6 @@ class ChooseGuardAlgorithm(object):
         self._state = self.STATE_PRIMARY_GUARDS
         self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
 
-    # XXX This is slow
     def nextByBandwidth(self, guards):
         # XXX when we pick a guard from remainingUtopic, as example, should we remove it
         # from the remaining list?
@@ -322,8 +309,6 @@ class ChooseGuardAlgorithm(object):
             return self.transitionTo(self.STATE_TRY_UTOPIC)
 
     def end(self, guard):
-        # XXX Why?
-        self._hasFinished = True
         if guard not in self._usedGuards: self._usedGuards.append(guard)
 
     def giveOneMoreChanceTo(self, tried, remaining):

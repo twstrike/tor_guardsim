@@ -56,7 +56,7 @@ class StateTryUtopic(object):
         self._remaining = []
 
     def next(self, context):
-        # print("StateTryUtopic - NEXT")
+        print("StateTryUtopic - NEXT")
 
         #  XXX This should add back to REMAINING_UTOPIC_GUARDS
         # When are they taken from REMAINING_UTOPIC_GUARDS?
@@ -359,6 +359,7 @@ class ChooseGuardAlgorithm(object):
         timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
         guards = [g for g in tried if g._unreachableSince]
         for g in guards:
+            print("unreacheable since (%s) is lesser than window (%s) = %s" % (g._unreachableSince, timeWindow, g._unreachableSince < timeWindow))
             if g._unreachableSince < timeWindow:
                 g._canRetry = True
                 remaining.add(g)

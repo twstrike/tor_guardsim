@@ -182,6 +182,9 @@ class ChooseGuardAlgorithm(object):
     def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus,
               selectDirGuards=False):
         self._hasFinished = False
+
+        # This is a reference on purpose, so we dont need to copy it back to the
+        # client
         self._usedGuards = usedGuards
 
         excludeNodesSet = set(excludeNodes)

@@ -305,8 +305,6 @@ class Client(object):
             if circuit:
                 guardSelection.end(guard)
 
-                # Copy used guards so it can be used in the next START
-                self._usedGuards = list(guardSelection._usedGuards)
 
                 return circuit  # We want to break the loop
             else:

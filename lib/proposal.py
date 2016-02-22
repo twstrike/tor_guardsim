@@ -268,7 +268,8 @@ class ChooseGuardAlgorithm(object):
         return guard
 
     def wasNotPossibleToConnect(self, guard):
-        return guard._unreachableSince != None
+        return not tor.entry_is_live(guard)
+        # return guard._unreachableSince != None
         # return guard._madeContact == False
 
     def markAsUnreachable(self, guard):

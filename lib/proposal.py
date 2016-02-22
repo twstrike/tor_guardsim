@@ -137,16 +137,29 @@ class StateTryDystopic(object):
         print("No threshold has failed")
 
 class StateRetryOnly(object):
+    def __init__(self):
+        self._shouldMarkForRetry = True
+
     def next(self, context):
         # print("StateRetryOnly - NEXT")
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key=lambda g: g._lastTried)
+
+        # XXX It will only reach this state if everything has failed so far.
+        # If we filter to return only the guards that are not currently unreachable
+        # it wont return anything.
+        # We should either not ignore unreachable OR mark all of them for retry
+        # before doing this the first time
+        if self._shouldMarkForRetry:
+            context.markForRetry(guards)
+            self._shouldMarkForRetry = False
 
         for g in guards:
             if context.wasNotPossibleToConnect(g): continue
             return g
 
         # XXX What if it exhaustes this list?
+        # self._shouldMarkForRetry = True
         print("Exhausted tried list")
 
 class ChooseGuardAlgorithm(object):
@@ -214,10 +227,8 @@ class ChooseGuardAlgorithm(object):
         self.transitionOnNextCall(state)
         return self._state.next(self)
 
-    # This similar to how tor currently does, but it mark them for retry
-    # when a new guard is successfully connectected to for the first time
-    def markPrimaryGuardsForRetry(self):
-        for g in self._primaryGuards:
+    def markForRetry(self, guards):
+        for g in guards:
             g.markForRetry()
 
     def nextGuard(self):
@@ -227,7 +238,10 @@ class ChooseGuardAlgorithm(object):
             # retry ALL of them if only one has been tried more than
             # PRIMARY_GUARDS_RETRY_INTERVAL minutes ago?
             # What if one of them has just been tried?
-            self.markPrimaryGuardsForRetry()
+
+            # This similar to how tor currently does, but it mark them for retry
+            # when a new guard is successfully connectected to for the first time
+            self.markForRetry(self._primaryGuards)
             self._previousState = self._state
             return self.transitionTo(self.STATE_PRIMARY_GUARDS)
 

@@ -226,6 +226,36 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
         self.assertEqual(algo._triedGuards, used) # the 4th is now tried
 
+    def test_STATE_TRY_UTOPIC_transitions_to_STATE_RETRY_ONLY_when_tried_threshold_surpassed(self):
+        used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]
+        used.append(createGuard())
+        # Move time to match last tried-and-failed guard added
+        simtime.advanceTime(30)
+        allDystopic = []
+
+        params = client.ClientParams()
+        params.GUARD_TRY_THRESHOLD = 0.01
+        # Make this interval smaller the PRIMARY_GUARDS_RETRY_INTERVAL
+        params.GUARDS_RETRY_TIME = params.PRIMARY_GUARDS_RETRY_INTERVAL - 1
+
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        # Move to STATE_TRY_UTOPIC
+        chosen = algo.nextGuard()
+        self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
+
+        # Time is 20 secs over GUARDS_RETRY_TIME
+        retryTimeInMinutes = params.GUARDS_RETRY_TIME * 60
+        simtime.advanceTime(retryTimeInMinutes + 20)
+        # Make chosen guard fail so it can't build a circuit and
+        # tries to get a new guard.
+        triedAndFailed(chosen, simtime.now())
+
+        algo.nextGuard()
+
+        self.assertEqual(algo._state, algo.STATE_RETRY_ONLY)
+
+
 if __name__ == '__main__':
     unittest.main()
 

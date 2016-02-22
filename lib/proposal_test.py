@@ -270,8 +270,7 @@ class TestProposal259(unittest.TestCase):
         chosen = algo.nextGuard()
 
         self.assertEqual(algo._state, algo.STATE_TRY_DYSTOPIC)
-        self.assertEqual(chosen, allDystopic[:-1])
-
+        self.assertEqual(chosen, allDystopic[0])
 
 if __name__ == '__main__':
     unittest.main()

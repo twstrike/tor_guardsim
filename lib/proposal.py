@@ -53,7 +53,6 @@ class StatePrimaryGuards(object):
 
 class StateTryUtopic(object):
     def __init__(self):
-        self._turn = -1
         self._remaining = []
 
     def next(self, context):

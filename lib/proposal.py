@@ -307,7 +307,6 @@ class ChooseGuardAlgorithm(object):
         timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
         guards = [g for g in tried if g._unreachableSince]
         for g in guards:
-            print("unreacheable since (%s) is lesser than window (%s) = %s" % (g._unreachableSince, timeWindow, g._unreachableSince < timeWindow))
             if g._unreachableSince < timeWindow:
                 g._canRetry = True
                 remaining.add(g)

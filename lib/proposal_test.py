@@ -291,6 +291,31 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(chosen, algo._remainingUtopicGuards.pop())
 
 
+    def test_STATE_RETRY_ONLY_returns_none_when_all_exhausted(self):
+        allGuards = [createGuard() for n in xrange(3)]
+        used = [triedAndFailed(allGuards[n], (n+1)*10) for n in xrange(3)]
+        allDystopic = []
+
+        params = client.ClientParams()
+        params.GUARDS_TRY_THRESHOLD = 0.5
+
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], 3, allGuards, allDystopic)
+
+        # Move time to equal last attempt
+        simtime.advanceTime(30)
+        # Fail all re-tried guards
+        for g in used:
+            chosen = algo.nextGuard()
+            self.assertEqual(chosen, g)
+            triedAndFailed(g, simtime.now() + g._lastTried)
+
+        chosen = algo.nextGuard()
+
+        self.assertEqual(algo._state, algo.STATE_RETRY_ONLY)
+        self.assertEqual(chosen, None)
+
+
 if __name__ == '__main__':
     unittest.main()
 

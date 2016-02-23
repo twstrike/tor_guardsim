@@ -351,9 +351,6 @@ class ChooseGuardAlgorithm(object):
     def _filterDystopicGuards(self, selectDirGuards, excludeNodesSet):
         return self.filterGuards(self._dystopicGuardsInConsensus, selectDirGuards, excludeNodesSet)
 
-    def _filterDystopicGuardsFrom(self, guards):
-        return set([dg for dg in guards if dg._node.seemsDystopic()])
-
     # XXX This is slow
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
         # This is not taking into account the remaining dystopic guards. Is that okay?

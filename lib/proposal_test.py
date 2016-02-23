@@ -235,7 +235,6 @@ class TestProposal259(unittest.TestCase):
         allDystopic = []
 
         params = client.ClientParams()
-        params.GUARD_TRY_THRESHOLD = 0.01
         # Make this interval smaller the PRIMARY_GUARDS_RETRY_INTERVAL
         params.GUARDS_RETRY_TIME = params.PRIMARY_GUARDS_RETRY_INTERVAL - 1
 
@@ -262,7 +261,7 @@ class TestProposal259(unittest.TestCase):
         allDystopic = [createGuard()]
 
         params = client.ClientParams()
-        params.GUARD_TRY_THRESHOLD = 1
+        params.GUARDS_TRY_THRESHOLD = 1
 
         algo = proposal.ChooseGuardAlgorithm(params)
         algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
@@ -271,6 +270,26 @@ class TestProposal259(unittest.TestCase):
 
         self.assertEqual(algo._state, algo.STATE_TRY_DYSTOPIC)
         self.assertEqual(chosen, allDystopic[0])
+
+
+    def test_STATE_TRY_UTOPIC_returns_guard_from_REMAINING_UTOPIC_GUARDS(self):
+        allGuards = [createGuard() for n in xrange(4)]
+        used = [triedAndFailed(allGuards[n], (n+1)*10) for n in xrange(3)]
+        allDystopic = []
+
+        params = client.ClientParams()
+        params.GUARDS_TRY_THRESHOLD = 1
+        params.GUARDS_FAILOVER_THRESHOLD = 1
+
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], 3, allGuards, allDystopic)
+
+        chosen = algo.nextGuard()
+
+        self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
+        self.assertEqual(len(algo._remainingUtopicGuards), 1)
+        self.assertEqual(chosen, algo._remainingUtopicGuards.pop())
+
 
 if __name__ == '__main__':
     unittest.main()

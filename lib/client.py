@@ -99,6 +99,8 @@ class ClientParams(object):
 
         self.GUARDS_FAILOVER_THRESHOLD = 0.02
 
+        self.PRIORITIZE_BANDWIDTH = PRIORITIZE_BANDWIDTH
+
 
 class Stats(object):
     """Contains information about the stats of several runs over potentially

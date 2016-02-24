@@ -185,10 +185,16 @@ class ChooseGuardAlgorithm(object):
         self._state = self.STATE_PRIMARY_GUARDS
         self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
 
+    def chooseRandomFrom(self, guards):
+        if self._params.PRIORITIZE_BANDWIDTH:
+            return tor.choose_node_by_bandwidth_weights(guards)
+
+        return random.choice(guards)
+
     def nextByBandwidth(self, guards):
         # XXX when we pick a guard from remainingUtopic, as example, should we remove it
         # from the remaining list?
-        return tor.choose_node_by_bandwidth_weights(guards)
+        return self.chooseRandomFrom(guards)
 
     # XXX How should the transition happen?
     # Immediately, or on the next call to NEXT?
@@ -358,12 +364,7 @@ class ChooseGuardAlgorithm(object):
         # XXX should we remove the chosen from remaining?
         # XXX also, if it is in remaining we dont care if its already in PRIMARY_GUARDS
         # o if it is bad. We just add.
-        return random.choice(remainingUtopic)
-
-        # choose weighted by BW (disabled for performance)
-        # we can optimize by calculating the bw weights only once (outside
-        # of this function)
-        # return tor.choose_node_by_bandwidth_weights(remainingUtopic)
+        return self.chooseRandomFrom(remainingUtopic)
 
     # we should first check if it
     #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried

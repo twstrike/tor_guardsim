@@ -209,15 +209,16 @@ class Client(object):
         assert (g)
 
         succeeded = self.connectToGuard(g)
-        willRetryPreviousGuards = self.entryGuardRegisterConnectStatus(g, succeeded)
+        refuseConnection = self.entryGuardRegisterConnectStatus(g, succeeded)
 
-        if willRetryPreviousGuards:
+        if refuseConnection:
             # XXX close any circuits pending on this channel.
-            # The channel is left in state OPEN becuase it did not fail,
+            # The channel is left in state OPEN because it did not fail,
             # we just chose not to use it.
             # See: channel_do_open_actions()
-            # XXX how should it reflect on the simulation?
-            pass
+            # In our simulation, we just ignore this guard
+            # and try again.
+            return self.buildCircuit()
 
         return succeeded
 
@@ -240,7 +241,7 @@ class Client(object):
                 # came back? We should give our earlier entries another try too,
                 # and close this connection so we don't use it before we've given
                 # the others a shot.
-                return self.markAllButThisForRetry(guard)
+                return self.markAllBeforeThisForRetry(guard)
         else:
             if not guard._madeContact:
                 print("Remove guard we never made contact with %s" % guard)
@@ -259,16 +260,16 @@ class Client(object):
         return False
 
     # Returns True iff previous guards will be retried later
-    def markAllButThisForRetry(self, guard):
-        print("Mark all but %s for RETRY" % guard)
+    def markAllBeforeThisForRetry(self, guard):
+        print("Mark all before %s for RETRY" % guard)
 
-        willRetryGuards = False
+        refuseConnection = False
         for g in self._GUARD_LIST:
             if g == guard: break
 
             # this should be if entry_is_live()
             if g._madeContact and tor.entry_is_live(guard) and guard._unreachableSince:
                 g._canRetry = True
-                willRetryGuards = True
+                refuseConnection = True
 
-        return willRetryGuards
+        return refuseConnection

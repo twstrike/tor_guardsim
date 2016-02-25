@@ -101,7 +101,6 @@ class ClientParams(object):
 
         self.PRIORITIZE_BANDWIDTH = PRIORITIZE_BANDWIDTH
 
-
 class Stats(object):
     """Contains information about the stats of several runs over potentially
     different clients."""
@@ -306,8 +305,6 @@ class Client(object):
             circuit = self.buildCircuitWith(guard)
             if circuit:
                 guardSelection.end(guard)
-
-
                 return circuit  # We want to break the loop
             else:
                 # XXX are we supposed to keep trying forever?

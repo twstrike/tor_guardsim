@@ -341,8 +341,9 @@ class ChooseGuardAlgorithm(object):
         remaining = list(remainingUtopic)
         while len(self._primaryGuards) < nPrimaryGuards:
             g = self._nextPrimaryGuard(used, remaining)
-            if not g: continue
-            self._primaryGuards.append(g)
+            # XXX Add to spec: PRIMARY_GUARDS is a list without repetition
+            if g and g not in self._primaryGuards:
+                self._primaryGuards.append(g)
 
     # XXX This is slow
     def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
@@ -355,15 +356,12 @@ class ChooseGuardAlgorithm(object):
                 # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
                 # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
                 # ... so we just don't add it.
-                if guard not in self._primaryGuards and not guard._bad:
+                if not guard._bad:
                     return guard
 
-        # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with
-        # new consensus arrives via the update() function is much more time
-
-        # XXX should we remove the chosen from remaining?
-        # XXX also, if it is in remaining we dont care if its already in PRIMARY_GUARDS
-        # o if it is bad. We just add.
+        # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with REMAINING_UTOPIC_GUARDS
+        # REMAINING_UTOPIC_GUARDS is by definition not bad (they come from the
+        # latest consensus).
         return self.chooseRandomFrom(remainingUtopic)
 
     # we should first check if it

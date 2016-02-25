@@ -248,7 +248,9 @@ class Client(object):
 	if not guard: return False
 
         succeeded = self.connectToGuard(guard)
-        self.entryGuardRegisterConnectStatus(guard, succeeded)
+	if self.entryGuardRegisterConnectStatus(guard, succeeded):
+	    return self.buildCircuit() # discard this circuit and try a new with previously used guards
+
         return succeeded
 
     def buildCircuit(self):
@@ -324,6 +326,7 @@ class Client(object):
             # First contact made with this guard
             if not guard._madeContact:
                 guard._madeContact = True
+                return self.markAllBeforeThisForRetry(guard)
         else:
             if not guard._madeContact:
                 pass  # remove this guard
@@ -336,3 +339,18 @@ class Client(object):
                 guard._canRetry = False
                 guard._lastAttempted = now
 
+	return False
+
+    # Returns True iff previous guards will be retried later
+    def markAllBeforeThisForRetry(self, guard):
+        print("Mark all before %s for RETRY" % guard)
+
+        refuseConnection = False
+        for g in self._usedGuards:
+            if g == guard: break
+
+            if g._madeContact and tor.entry_is_live(guard) and guard._unreachableSince:
+                g._canRetry = True
+                refuseConnection = True
+
+        return refuseConnection

@@ -27,6 +27,9 @@ class Client(object):
         # guard list for this client, default is 3
         self._GUARD_LIST = []
 
+        # timeout in simulated times
+        self._BUILD_CIRCUIT_TIMEOUT = 30
+
         # Bootstrap Tor
         self.updateGuardLists()
         self.pickEntryGuards(True)
@@ -193,6 +196,9 @@ class Client(object):
            Return true on success, false on failure."""
         up = self.probeGuard(guard)
 
+        # time pass while connecting, otherwise wont timeout
+        simtime.advanceTime(1)
+
         if up:
             self._stats.addBandwidth(guard.node.bandwidth)
 
@@ -201,26 +207,31 @@ class Client(object):
     def markGuard(self, guard, up):
         guard.mark(up)
 
-    # XXX this builds a circuit for an outgoing channel.
-    # This is the path we take in channel_do_open_actions()
     def buildCircuit(self):
-        """Try to build a circuit; return true if we succeeded."""
-        g = self.getGuard()
-        assert (g)
+        """Try to build a circuit until we succeeded, or timeout."""
 
-        succeeded = self.connectToGuard(g)
-        refuseConnection = self.entryGuardRegisterConnectStatus(g, succeeded)
+        # Be warned, this will run forever unless we time out
+        startTime = simtime.now()
+        while True:
+            if simtime.now() - startTime > self._BUILD_CIRCUIT_TIMEOUT:
+                print("Timed out while trying to build a circuit")
+                return False
 
-        if refuseConnection:
-            # XXX close any circuits pending on this channel.
-            # The channel is left in state OPEN because it did not fail,
-            # we just chose not to use it.
-            # See: channel_do_open_actions()
-            # In our simulation, we just ignore this guard
-            # and try again.
-            return self.buildCircuit()
+            g = self.getGuard()
+            assert (g)
 
-        return succeeded
+            succeeded = self.connectToGuard(g)
+            if self.entryGuardRegisterConnectStatus(g, succeeded):
+                # close any circuits pending on this channel.
+                # The channel is left in state OPEN because it did not fail,
+                # we just chose not to use it.
+                # See: channel_do_open_actions()
+                # In our simulation, we just ignore this guard
+                # and try again.
+                continue
+
+            if succeeded:
+                return g # our circuit
 
     # Returns True iff previous guards will be retried later
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
@@ -273,3 +284,4 @@ class Client(object):
                 refuseConnection = True
 
         return refuseConnection
+

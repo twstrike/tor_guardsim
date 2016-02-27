@@ -1,15 +1,20 @@
-_GUARDS = {}
-
 import random
 import pprint
 
-# Manage guard instances for us
-def GetGuard(node):
-    if node not in _GUARDS: _GUARDS[node] = Guard(node)
-    return _GUARDS[node]
-
 class Guard(object):
     """Represents what a client knows about a guard."""
+
+    GUARDS = {}
+
+    @classmethod
+    def get(cls, node):
+        if node not in cls.GUARDS: cls.GUARDS[node] = Guard(node)
+        return cls.GUARDS[node]
+
+    @classmethod
+    def markAllUnlisted(cls):
+        for g in cls.GUARDS:
+            cls.GUARDS[g].markUnlisted()
 
     def __repr__(self):
         return pprint.pformat(vars(self), indent=6, width=2)
@@ -25,16 +30,11 @@ class Guard(object):
         self._markedUp = False
 
         # True iff the node is listed as a guard in the most recent consensus
-        # XXX We are assuming this to be equivalent of
-        # node_get_by_id(e->identity) == NULL
-        self._listed = True
+        self._listed = False
 
         # TODO: How is this different from lastAttempted?
         # The timestamp of the last time it tried to connecto to this node.
         self._lastTried = None
-
-        # True iff the guard is not in the latest consensus
-        self._bad = None
 
         ############################
         # --- From entry_guard_t ---#
@@ -49,12 +49,9 @@ class Guard(object):
         self._isDirectoryCache = random.random() < pDirectoryCache
 
         # Time when the guard went to a bad state
-        # XXX set by pathbias_measure_use_rate() - should we add to simulation?
-        # XXX set by add_an_entry_guard()
         self._badSince = None
 
         # False if we have never connected to this router, True if we have
-        # XXX This is set by add_an_entry_guard(), indirectly by learned_bridge_descriptor()
         self._madeContact = None
 
         # The time at which we first noticed we could not connect to this node
@@ -69,10 +66,7 @@ class Guard(object):
 
         # Should we retry connecting to this entry, in spite of having it
         # marked as unreachable?
-        # XXX this is set by add_an_entry_guard()
         self._canRetry = None
-
-        # XXX should we add path_bias_disabled?
 
     def __str__(self):
         return "%s" % self._node._id
@@ -122,9 +116,12 @@ class Guard(object):
         """
         return self._listed
 
+    def isBad(self):
+        return not self._listed
+
     def isUp(self):
         """Return true iff the guard is up"""
-        return self.node._node_up
+        return self.node.isReallyUp()
 
     def markForRetry(self):
         """Mark this guard as untried, so that we'll be willing to try it
@@ -143,5 +140,3 @@ class Guard(object):
 
     def isBad(self):
         return self.isListed() or not self.isUp()
-
-

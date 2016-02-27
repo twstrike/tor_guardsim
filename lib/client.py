@@ -13,59 +13,10 @@ from py3hax import *
 from tornet import compareNodeBandwidth
 import simtime
 import tor
-from guard import GetGuard
+from guard import Guard
 import proposal
 
 import pprint
-
-class ExponentialTimer(object):
-    """Implements an exponential timer using simulated time."""
-
-    def __init__(self, initial, multiplier, action, *args, **kwargs):
-        """Create a timer that's ready to fire immediately.
-
-        After it first fires, it won't be ready again until **initial** seconds
-        have passed.  Each time after that, it will increase the delay by a
-        factor of **multiplier**.
-        """
-        self._initial_delay = initial
-        self._multiplier = multiplier
-        self._paused = False
-
-        # This is a callable which should be called when the timer fires.  It
-        # should return a bool, and if that is ``False``, then we should
-        # reschedule (with exponential delay, of course).  Otherwise, do
-        # nothing (because we assume that the scheduled action was successful).
-        self.fireAction = partial(action, *args, **kwargs)
-
-        self.reset()
-
-    def pause(self):
-        """Pause this timer."""
-        self._paused = True
-
-    def unpause(self):
-        """Resume this timer."""
-        self._paused = False
-
-    def reset(self):
-        """Reset the timer to the state when it was first created."""
-        self._next = 0
-        self._cur_delay = self._initial_delay
-
-    def isReady(self):
-        """Return true iff the timer is ready to fire now."""
-        if self._paused:
-            return False
-        return self._next <= simtime.now()
-
-    def fire(self):
-        """Fire the timer."""
-        assert self.isReady()
-        self._next = simtime.now() + self._cur_delay
-        self._cur_delay *= self._multiplier
-        self.fireAction()
-
 
 class ClientParams(object):
     """Represents the configuration parameters of the client algorithm, as given
@@ -174,7 +125,6 @@ class Client(object):
         self._usedGuards = []
 
         # All guards in the latest consensus
-        # XXX net._get_consensus() should return Guards
         self._ALL_GUARDS = []
 
         # For performance, filters all dystopics when a consensus is received
@@ -184,36 +134,28 @@ class Client(object):
         self.NUM_PRIMARY_GUARDS = 3  # chosen by dice roll, guaranteed to be random
 
         # For how long we should keep looping until we find a guard we can use
-        # to build a circuit, in seconds
+        # to build a circuit, in number of guards to try
         self._BUILD_CIRCUIT_TIMEOUT = 30
 
         # At bootstrap, we get a new consensus
         self.updateGuardLists()
 
-    def inLatestConsensus(self, guard):
-        return guard._listed
-
     def updateGuardLists(self):
         """Called at start and when a new consensus should be made & received:
            updates *TOPIC_GUARDS."""
 
-        for g in self._usedGuards:
-            g.markUnlisted()
+        Guard.markAllUnlisted()
 
         # We received a new consensus now, and use THIS until we receive a new
         # consensus
         self._ALL_GUARDS = []
         for n in list(self._net.new_consensus()):
-            guard = GetGuard(n)
+            guard = Guard.get(n)
             guard.markListed()
             self._ALL_GUARDS.append(guard)
 
         # Filter dystopics
         self._ALL_DYSTOPIC = [dg for dg in self._ALL_GUARDS if dg.node.seemsDystopic()]
-
-        # Update BAD status for usedGuards
-        for g in self._usedGuards:
-            g._bad = not self.inLatestConsensus(g)
 
     def markGuard(self, guard, up):
         guard.mark(up)
@@ -249,18 +191,19 @@ class Client(object):
         guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
                              self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
-        # Be warned, this will run forever unless we time out
-        startTime = simtime.now()
-        while True:
-            if simtime.now() - startTime > self._BUILD_CIRCUIT_TIMEOUT:
-                print("Timed out while trying to build a circuit")
-                return False
+        tried = 0
 
+        while tried < self._BUILD_CIRCUIT_TIMEOUT:
             guard = guardSelection.nextGuard()
             circuit = self.buildCircuitWith(guard)
             if circuit:
                 guardSelection.end(guard)
                 return circuit
+
+            tried += 1
+
+        print("Timed out while trying to build a circuit")
+        return False
 
     def buildCircuitWith(self, guard):
         # Build the circuit data structure.
@@ -272,7 +215,7 @@ class Client(object):
         if self.connectAndRegisterStatus(guard):
             return guard # our circuit
         else:
-            return None 
+            return None
 
     def connectAndRegisterStatus(self, guard):
 	if not guard: return False
@@ -333,4 +276,3 @@ class Client(object):
                 refuseConnection = True
 
         return refuseConnection
-

@@ -3,7 +3,7 @@ from __future__ import print_function
 import tor
 import random
 import simtime
-from guard import GetGuard
+from guard import Guard
 
 # XXX implement prioritize bandwith behavior
 
@@ -51,7 +51,7 @@ class Client(object):
 
         self._ALL_GUARDS = []
         for node in self._net.new_consensus():
-            guard = GetGuard(node)
+            guard = Guard.get(node)
             guard.markListed()  # by defition listed is in the latest consensus
             self._ALL_GUARDS.append(guard)
 
@@ -283,4 +283,3 @@ class Client(object):
                 refuseConnection = True
 
         return refuseConnection
-

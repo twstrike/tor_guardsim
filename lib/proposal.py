@@ -350,7 +350,7 @@ class ChooseGuardAlgorithm(object):
             # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
             # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
             # ... so we just don't add it.
-            if not guard._bad:
+            if not guard.isBad():
                 return guard
 
     # we should first check if it
@@ -364,4 +364,3 @@ class ChooseGuardAlgorithm(object):
                 return True
 
         return False
-

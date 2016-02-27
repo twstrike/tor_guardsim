@@ -6,8 +6,8 @@ def choose_node_by_bandwidth_weights(all_guards):
     bandwidths = compute_weighted_bandwidths(all_guards)
     bandwidths = scale_array_elements_to_u64(bandwidths)
     idx = choose_array_element_by_weight(bandwidths)
-    
-    if idx < 0: return None 
+
+    if idx < 0: return None
     return all_guards[idx]
 
 def scale_array_elements_to_u64(bandwidths):
@@ -74,7 +74,7 @@ def compute_weighted_bandwidths(guards):
     return bandwidths
 
 def entry_is_time_to_retry(guard, time):
-    if guard._lastAttempted < guard._unreachableSince:
+    if not guard._lastAttempted or guard._lastAttempted < guard._unreachableSince:
         return True
 
     unreachableFor = time - guard._unreachableSince
@@ -89,7 +89,6 @@ def entry_is_time_to_retry(guard, time):
 
     for periodDuration, intervalDuringPeriod in retryPeriods:
         if unreachableFor <= periodDuration:
-            # XXX _lastAttempted can be None?
             deadlineForRetry = guard._lastAttempted + intervalDuringPeriod
             return time > deadlineForRetry
 

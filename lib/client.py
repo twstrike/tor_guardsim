@@ -191,12 +191,13 @@ class Client(object):
         gs.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
                  self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
+
         tried = 0
 
         while tried < self._BUILD_CIRCUIT_TIMEOUT:
             guard = gs.nextGuard()
             circuit = self.composeCircuitAndConnect(guard)
-            if circuit:
+            if not gs.shouldContinue(circuit != None):
                 gs.end(guard)
                 return circuit
 
@@ -222,13 +223,7 @@ class Client(object):
 
         succeeded = self.connectToGuard(guard)
 
-        # Here we try the same heuristic existing in
-        # entry_guard_register_connect_status() on the first contact made to a
-        # new guard.
-        # See: https://gitweb.torproject.org/tor.git/tree/src/or/entrynodes.c?id=tor-0.2.7.6#n803
-	if self.entryGuardRegisterConnectStatus(guard, succeeded):
-            # discard this circuit and try a new with previously used guards
-	    return self.buildCircuit()
+	self.entryGuardRegisterConnectStatus(guard, succeeded)
 
         return succeeded
 
@@ -246,7 +241,6 @@ class Client(object):
             # First contact made with this guard
             if not guard._madeContact:
                 guard._madeContact = True
-                return self.markAllBeforeThisForRetry(guard)
         else:
             if not guard._madeContact:
                 pass  # remove this guard
@@ -258,21 +252,3 @@ class Client(object):
             else:
                 guard._canRetry = False
                 guard._lastAttempted = now
-
-	return False
-
-    # Returns true if the circuit we just built should be discarded to retry
-    # primary guards with higher preference. This happens so we can detect a
-    # network reconnect and try again "better" guards.
-    def markAllBeforeThisForRetry(self, guard):
-        print("Mark all before %s for RETRY" % guard)
-
-        refuseConnection = False
-        for g in self._usedGuards:
-            if g == guard: break
-
-            if g._madeContact and tor.entry_is_live(guard) and guard._unreachableSince:
-                g._canRetry = True
-                refuseConnection = True
-
-        return refuseConnection

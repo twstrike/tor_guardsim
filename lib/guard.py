@@ -116,9 +116,6 @@ class Guard(object):
         """
         return self._listed
 
-    def isBad(self):
-        return not self._listed
-
     def isUp(self):
         """Return true iff the guard is up"""
         return self.node.isReallyUp()
@@ -139,4 +136,4 @@ class Guard(object):
         return self._addedAt + nSec >= simtime.now()
 
     def isBad(self):
-        return self.isListed() or not self.isUp()
+        return not self.isListed() or not self.isUp()

@@ -154,8 +154,6 @@ class ChooseGuardAlgorithm(object):
 
     def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus,
               selectDirGuards=False):
-        # This is a reference on purpose, so we dont need to copy it back to the
-        # client
         self._usedGuards = usedGuards
 
         excludeNodesSet = set(excludeNodes)
@@ -203,6 +201,12 @@ class ChooseGuardAlgorithm(object):
     def markForRetry(self, guards):
         for g in guards:
             g.markForRetry()
+
+    def shouldContinue(self, success):
+        if success and self._state == self.STATE_RETRY_ONLY:
+            self.transitionOnNextCall(self.STATE_PRIMARY_GUARDS)
+            return True
+        return not success
 
     def nextGuard(self):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
@@ -332,7 +336,7 @@ class ChooseGuardAlgorithm(object):
         while len(self._primaryGuards) < nPrimaryGuards:
             g = self._nextPrimaryGuard(used, remaining)
             # XXX Add to spec: PRIMARY_GUARDS is a list of unique elements
-            if g and g not in self._primaryGuards:
+            if g and (not g.isBad()) and g not in self._primaryGuards:
                 self._primaryGuards.append(g)
 
     def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
@@ -342,16 +346,8 @@ class ChooseGuardAlgorithm(object):
         if not usedGuards:
             return self.chooseRandomFrom(remainingUtopic)
 
-        while usedGuards:
-            guard = usedGuards.pop(0)
+        return usedGuards.pop(0)
 
-            # From proposal §2.2.5:
-            # If any PRIMARY_GUARDS have become bad, remove the guard from
-            # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
-            # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
-            # ... so we just don't add it.
-            if not guard.isBad():
-                return guard
 
     # we should first check if it
     #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried

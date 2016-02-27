@@ -186,18 +186,18 @@ class Client(object):
 
     def buildCircuit(self):
         """Try to build a circuit until we succeeded, or timeout."""
-        guardSelection = proposal.ChooseGuardAlgorithm(self._p)
+        gs = proposal.ChooseGuardAlgorithm(self._p)
 
-        guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
-                             self._ALL_GUARDS, self._ALL_DYSTOPIC)
+        gs.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
+                 self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
         tried = 0
 
         while tried < self._BUILD_CIRCUIT_TIMEOUT:
-            guard = guardSelection.nextGuard()
-            circuit = self.buildCircuitWith(guard)
+            guard = gs.nextGuard()
+            circuit = self.composeCircuitAndConnect(guard)
             if circuit:
-                guardSelection.end(guard)
+                gs.end(guard)
                 return circuit
 
             tried += 1
@@ -205,7 +205,7 @@ class Client(object):
         print("Timed out while trying to build a circuit")
         return False
 
-    def buildCircuitWith(self, guard):
+    def composeCircuitAndConnect(self, guard):
         # Build the circuit data structure.
         # In the simulation we only require the guard to exists. No middle or
         # exit node, so the guard is our circuit.
@@ -262,7 +262,7 @@ class Client(object):
 	return False
 
     # Returns true if the circuit we just built should be discarded to retry
-    # primary guards high higher preference. This happens so we can detect a
+    # primary guards with higher preference. This happens so we can detect a
     # network reconnect and try again "better" guards.
     def markAllBeforeThisForRetry(self, guard):
         print("Mark all before %s for RETRY" % guard)

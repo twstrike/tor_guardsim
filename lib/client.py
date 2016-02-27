@@ -187,11 +187,6 @@ class Client(object):
         # to build a circuit, in seconds
         self._BUILD_CIRCUIT_TIMEOUT = 30
 
-        # XXX What is buildCircuitWith()?
-        # Given the appendix, if this is False the success rate is 0%
-        # When we cant connect to the first guard we try.
-        self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD = True
-
         # At bootstrap, we get a new consensus
         self.updateGuardLists()
 
@@ -239,40 +234,39 @@ class Client(object):
            Return true on success, false on failure."""
         up = self.probeGuard(guard)
 
+        # time pass while connecting, otherwise wont timeout
+        simtime.advanceTime(1)
+
         if up:
             self._stats.addBandwidth(guard.node.bandwidth)
 
         return up
 
-    def connectAndRegisterStatus(self, guard):
-	if not guard: return False
-
-        succeeded = self.connectToGuard(guard)
-	if self.entryGuardRegisterConnectStatus(guard, succeeded):
-	    return self.buildCircuit() # discard this circuit and try a new with previously used guards
-
-        return succeeded
-
     def buildCircuit(self):
-        """Try to build a circuit; return true if we succeeded."""
+        """Try to build a circuit until we succeeded, or timeout."""
+        guardSelection = proposal.ChooseGuardAlgorithm(self._p)
 
-        g = self.getGuard()
+        guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
+                             self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
-        if self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD:
-            return g
+        # Be warned, this will run forever unless we time out
+        startTime = simtime.now()
+        while True:
+            if simtime.now() - startTime > self._BUILD_CIRCUIT_TIMEOUT:
+                print("Timed out while trying to build a circuit")
+                return False
 
-        return self.connectAndRegisterStatus(g)
+            guard = guardSelection.nextGuard()
+            circuit = self.buildCircuitWith(guard)
+            if circuit:
+                guardSelection.end(guard)
+                return circuit
 
-    # XXX What is this supposed to do? Build the circuit data structure, OR 
-    # connect to the circuit?
     def buildCircuitWith(self, guard):
         # Build the circuit data structure.
         # In the simulation we only require the guard to exists. No middle or
         # exit node, so the guard is our circuit.
 	if not guard: return None # no guard => no circuit
-
-        if not self._BUILD_CIRCUIT_WITH_CONNECTS_TO_GUARD:
-            return guard
 
         # Otherwise, connecting to the circuit is part of building it
         if self.connectAndRegisterStatus(guard):
@@ -280,39 +274,22 @@ class Client(object):
         else:
             return None 
 
-    # XXX This is choose_random_entry_impl in tor
-    def getGuard(self):
-        guardSelection = proposal.ChooseGuardAlgorithm(self._p)
+    def connectAndRegisterStatus(self, guard):
+	if not guard: return False
 
-        # XXX we should save used_guards and pass as parameter
-        guardSelection.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
-                             self._ALL_GUARDS, self._ALL_DYSTOPIC)
+        succeeded = self.connectToGuard(guard)
 
-        # XXX it means we keep trying different guards until we succeed to build
-        # a circuit (even if the circuit failed by other reasons)
-        tries = 0
-        startTime = simtime.now()
-        while True:
-            if simtime.now() - startTime > self._BUILD_CIRCUIT_TIMEOUT:
-                print("Timed out while trying to build a circuit")
-                return False
+        # Here we try the same heuristic existing in
+        # entry_guard_register_connect_status() on the first contact made to a
+        # new guard.
+        # See: https://gitweb.torproject.org/tor.git/tree/src/or/entrynodes.c?id=tor-0.2.7.6#n803
+	if self.entryGuardRegisterConnectStatus(guard, succeeded):
+            # discard this circuit and try a new with previously used guards
+	    return self.buildCircuit()
 
-            # XXX will it ALWAYS succeed at returning something?
-            guard = guardSelection.nextGuard()
-            tries += 1
+        return succeeded
 
-            if tries % 100 == 0:
-                print("We tried 100 without success")
-
-            circuit = self.buildCircuitWith(guard)
-            if circuit:
-                guardSelection.end(guard)
-                return circuit  # We want to break the loop
-            else:
-                # XXX are we supposed to keep trying forever?
-                # What guarantees we will find something?
-                return False
-
+    # See: entry_guard_register_connect_status()
     def entryGuardRegisterConnectStatus(self, guard, succeeded):
         now = simtime.now()
         guard._lastTried = now
@@ -341,7 +318,9 @@ class Client(object):
 
 	return False
 
-    # Returns True iff previous guards will be retried later
+    # Returns true if the circuit we just built should be discarded to retry
+    # primary guards high higher preference. This happens so we can detect a
+    # network reconnect and try again "better" guards.
     def markAllBeforeThisForRetry(self, guard):
         print("Mark all before %s for RETRY" % guard)
 
@@ -354,3 +333,4 @@ class Client(object):
                 refuseConnection = True
 
         return refuseConnection
+

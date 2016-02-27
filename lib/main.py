@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8; -*-
 
 from __future__ import print_function
 
@@ -88,10 +89,11 @@ def trivialSimulation(args):
     print("Average guard bandwidth capacity:   %d KB/s" % stats.averageGuardBandwidth())
 
     # This does not make sense with -C
-    print("Exposure to guard over time (1, 15, 30) hours:   %s, %s, %s"
+    print("Exposure to new guards after 1/15/30 hours:   %s, %s, %s"
           % (stats.guardsExposureAfter(60 * 60),
-             stats.guardsExposureAfter(15 * 60 * 60),
-             stats.guardsExposureAfter(30 * 60 * 60))
+             stats.guardsExposureAfter(15 * 60 * 60) - stats.guardsExposureAfter(60 * 60),
+             stats.guardsExposureAfter(30 * 60 * 60) - stats.guardsExposureAfter(15 * 60 * 60)
+             )
           )
 
     print("Number of guards we tried before succeeding first circuit:   %d" % numTriedGuards)

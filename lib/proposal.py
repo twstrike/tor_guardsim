@@ -13,9 +13,9 @@ class StatePrimaryGuards(object):
     def next(self, context):
         # print("StatePrimaryGuards - NEXT")
 
-        # XXX using tor.entry_is_live(g) rather than wasNotPossibleToConnect()
+        # Using tor.entry_is_live(g) rather than wasNotPossibleToConnect()
         # in markAsUnreachableAndAddToTried() whould remove the need of canRetry(),
-        # and also add the same retry conditions tor currently has
+        # and also add the same retry conditions tor currently has.
         for g in context._primaryGuards:
             if canRetry(g) or not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g
@@ -26,21 +26,20 @@ class StatePrimaryGuards(object):
         if context.allHaveBeenTried():
             return context.transitionToPreviousStateOrTryUtopic()
 
-        # XXX what happens if no threshold fails?
+        # is it possible?
         print("No threshold has failed")
 
 class StateTryUtopic(object):
     def next(self, context):
         print("StateTryUtopic - NEXT")
 
-        #  XXX This should add back to REMAINING_UTOPIC_GUARDS
-        # When are they taken from REMAINING_UTOPIC_GUARDS?
+        # This should add back to REMAINING_UTOPIC_GUARDS but
+        # when are they removed from REMAINING_UTOPIC_GUARDS?
         context.moveOldTriedGuardsToRemainingList()
 
-        #  XXX When are USED_GUARDS removed from PRIMARY_GUARDS?
-        # Is not PRIMARY_GUARDS built from USED_GUARDS preferably?
+        # Try previously used guards. They were PRIMARY_GUARDS at some point.
+        # Why did they leave the PRIMARY_GUARDS list?
         guards = [g for g in context._usedGuards if g not in context._primaryGuards]
-
         for g in guards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g
@@ -53,12 +52,6 @@ class StateTryUtopic(object):
                                      context.STATE_TRY_DYSTOPIC)
         if not ok: return fromTransition
 
-        # Return each entry from REMAINING_UTOPIC_GUARDS using
-        #  NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-        #  to it, remove the entry from REMAINING_UTOPIC_GUARDS, mark it as
-        # unreachable and add it to TRIED_GUARDS.
-        # XXX There might be unavailable entries in _remainingUtopicGuards because
-        # they will only be removed if they have higher bandwidth
         g = context.getFirstByBandwidthAndAddUnreachableTo(context._remainingUtopicGuards,
                 context._triedGuards)
         if g: return g
@@ -72,7 +65,7 @@ class StateTryUtopic(object):
                                      context.STATE_TRY_DYSTOPIC)
         if not ok: return fromTransition
 
-        # XXX what happens if no threshold fails?
+        # is it possible?
         print("No threshold has failed")
 
 class StateTryDystopic(object):
@@ -94,12 +87,6 @@ class StateTryDystopic(object):
         ok, fromTransition = context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
         if not ok: return fromTransition
 
-        # Return each entry from REMAINING_DYSTOPIC_GUARDS using
-        # NEXT_BY_BANDWIDTH. For each entry, if it was not possible to connect
-        # to it, remove the entry from REMAINING_DYSTOPIC_GUARDS, mark it as
-        # unreachable and add it to TRIED_DYSTOPIC_GUARDS.
-        # XXX There might be unavailable entries in _remainingUtopicGuards because
-        # they will only be removed if they have higher bandwidth
         g = context.getFirstByBandwidthAndAddUnreachableTo(
                 context._remainingDystopicGuards, context._triedDystopicGuards)
         if g: return g
@@ -111,7 +98,7 @@ class StateTryDystopic(object):
         ok, fromTransition = context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
         if not ok: return fromTransition
 
-        # XXX what happens if no threshold fails?
+        # is it possible?
         print("No threshold has failed")
 
 class StateRetryOnly(object):
@@ -123,11 +110,11 @@ class StateRetryOnly(object):
         guards = context._triedGuards + context._triedDystopicGuards
         guards.sort(key=lambda g: g._lastTried)
 
-        # XXX It will only reach this state if everything has failed so far.
-        # If we filter to return only the guards that are not currently unreachable
+        # It will only reach this state if everything has failed so far, so if
+        # we filter to return only the guards that are not currently unreachable
         # it wont return anything.
         # We should either not ignore unreachable OR mark all of them for retry
-        # before doing this the first time
+        # before doing this the first time. We chose mark them for retry.
         if self._shouldMarkForRetry:
             context.markForRetry(guards)
             self._shouldMarkForRetry = False
@@ -136,8 +123,10 @@ class StateRetryOnly(object):
             if context.wasNotPossibleToConnect(g): continue
             return g
 
-        # XXX What if it exhaustes this list?
-        # self._shouldMarkForRetry = True
+        # What if it exhaustes this list?
+        # We mark them for retry and keep returning - this is an infinite loop
+        # anyways.
+        self._shouldMarkForRetry = True
         print("Exhausted tried list")
 
 class ChooseGuardAlgorithm(object):
@@ -192,12 +181,12 @@ class ChooseGuardAlgorithm(object):
         return random.choice(guards)
 
     def nextByBandwidth(self, guards):
-        # XXX when we pick a guard from remainingUtopic, as example, should we remove it
-        # from the remaining list?
+        # Should a guard be removed from REMAINING_*_GUARDS when it is chosen
+        # by nextByBandwidth? Where do we enforce PRIMARY_GUARDS wont contain
+        # duplicate guards?
         return self.chooseRandomFrom(guards)
 
-    # XXX How should the transition happen?
-    # Immediately, or on the next call to NEXT?
+    # How should the transition happen? Immediately or on the next call to NEXT?
     def transitionTo(self, state):
         #return self.transitionOnNextCall(state)
         return self.transitionImmediatelyTo(state)
@@ -205,7 +194,7 @@ class ChooseGuardAlgorithm(object):
     def transitionOnNextCall(self, state):
         print("! Transitioned to %s" % state)
         self._state = state
-        return None # will have one None to indicate a state transition
+        return None # The infinite While will see a None to indicate a state transition
 
     def transitionImmediatelyTo(self, state):
         self.transitionOnNextCall(state)
@@ -218,13 +207,14 @@ class ChooseGuardAlgorithm(object):
     def nextGuard(self):
         haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
-            # XXX This is intended to retry the primary guards, but should we
+            # This is intended to retry ALL PRIMARY_GUARDS, but should we really
             # retry ALL of them if only one has been tried more than
             # PRIMARY_GUARDS_RETRY_INTERVAL minutes ago?
-            # What if one of them has just been tried?
+            # What if another one of them has just been tried?
 
-            # This similar to how tor currently does, but it mark them for retry
-            # when a new guard is successfully connectected to for the first time
+            # Mark for retry is the strategy tor currently uses. But comparing
+            # to tor code, this happens when a new guard is successfully
+            # connectected to for the first time.
             self.markForRetry(self._primaryGuards)
             self._previousState = self._state
             return self.transitionTo(self.STATE_PRIMARY_GUARDS)
@@ -289,8 +279,9 @@ class ChooseGuardAlgorithm(object):
             assert(fromTransition == None)
             return (True, None)
 
-        # XXX should this happen BEFORE transitioning? If yes, we can not use checkFailover()
-        # OR we can not use transitionImmediatelyTo()
+        # Should this happen BEFORE transitioning in case of a failover failure?
+        # If yes, we can not use checkFailover() the way it is currently written.
+        # An alternative is simply do not use transitionImmediatelyTo().
         guards = self._primaryGuards + self._triedGuards + self._triedDystopicGuards
         for g in guards:
             self.markAsUnreachable(g)
@@ -334,35 +325,33 @@ class ChooseGuardAlgorithm(object):
     def _filterDystopicGuards(self, selectDirGuards, excludeNodesSet):
         return self.filterGuards(self._dystopicGuardsInConsensus, selectDirGuards, excludeNodesSet)
 
-    # XXX This is slow
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
         # This is not taking into account the remaining dystopic guards. Is that okay?
         used = list(usedGuards)
         remaining = list(remainingUtopic)
         while len(self._primaryGuards) < nPrimaryGuards:
             g = self._nextPrimaryGuard(used, remaining)
-            # XXX Add to spec: PRIMARY_GUARDS is a list without repetition
+            # XXX Add to spec: PRIMARY_GUARDS is a list of unique elements
             if g and g not in self._primaryGuards:
                 self._primaryGuards.append(g)
 
-    # XXX This is slow
     def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
-        if usedGuards:
-            while usedGuards:
-                guard = usedGuards.pop(0)
-
-                # From proposal §2.2.5:
-                # If any PRIMARY_GUARDS have become bad, remove the guard from
-                # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
-                # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
-                # ... so we just don't add it.
-                if not guard._bad:
-                    return guard
-
-        # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with REMAINING_UTOPIC_GUARDS
+        # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with REMAINING_UTOPIC_GUARDS.
         # REMAINING_UTOPIC_GUARDS is by definition not bad (they come from the
         # latest consensus).
-        return self.chooseRandomFrom(remainingUtopic)
+        if not usedGuards:
+            return self.chooseRandomFrom(remainingUtopic)
+
+        while usedGuards:
+            guard = usedGuards.pop(0)
+
+            # From proposal §2.2.5:
+            # If any PRIMARY_GUARDS have become bad, remove the guard from
+            # PRIMARY_GUARDS. Then ensure that PRIMARY_GUARDS contain
+            # N_PRIMARY_GUARDS entries by repeatedly calling NEXT_PRIMARY_GUARD.
+            # ... so we just don't add it.
+            if not guard._bad:
+                return guard
 
     # we should first check if it
     #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried
@@ -375,3 +364,4 @@ class ChooseGuardAlgorithm(object):
                 return True
 
         return False
+

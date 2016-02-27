@@ -5,7 +5,7 @@ import random
 import simtime
 from guard import GetGuard
 
-# TODO implement prioritize bandwith behavior
+# XXX implement prioritize bandwith behavior
 
 # This client always initializes with an empty tor state.
 class Client(object):

@@ -132,7 +132,7 @@ class Client(object):
                   g not in self._GUARD_LIST and g.node._isRunning and g._isDirectoryCache]
         g = random.choice(guards)
 
-        # XXX should we simulate the busy behaviot here?
+        # XXX should we simulate the busy behavior here?
         # if g._isBusy: return None
         return g
 
@@ -156,8 +156,8 @@ class Client(object):
 
         return (liveEntryGuards, False)
 
-    # XXX This is choose_random_entry_impl in tor
-    def getGuard(self):
+    # This is choose_random_entry_impl in tor
+    def chooseRandomGuard(self):
         return self.chooseRandomEntryImpl(False)
 
     def decideNumGuards(self, forDirectory):
@@ -217,7 +217,7 @@ class Client(object):
                 print("Timed out while trying to build a circuit")
                 return False
 
-            g = self.getGuard()
+            g = self.chooseRandomGuard()
             assert (g)
 
             succeeded = self.connectToGuard(g)
@@ -278,7 +278,6 @@ class Client(object):
         for g in self._GUARD_LIST:
             if g == guard: break
 
-            # this should be if entry_is_live()
             if g._madeContact and tor.entry_is_live(guard) and guard._unreachableSince:
                 g._canRetry = True
                 refuseConnection = True

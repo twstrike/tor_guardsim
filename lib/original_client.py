@@ -27,7 +27,8 @@ class Client(object):
         # guard list for this client, default is 3
         self._GUARD_LIST = []
 
-        # timeout in simulated times
+        # For how long we should keep looping until we find a guard we can use
+        # to build a circuit, in number of guards to try
         self._BUILD_CIRCUIT_TIMEOUT = 30
 
         # Bootstrap Tor
@@ -210,13 +211,8 @@ class Client(object):
     def buildCircuit(self):
         """Try to build a circuit until we succeeded, or timeout."""
 
-        # Be warned, this will run forever unless we time out
-        startTime = simtime.now()
-        while True:
-            if simtime.now() - startTime > self._BUILD_CIRCUIT_TIMEOUT:
-                print("Timed out while trying to build a circuit")
-                return False
-
+        tried = 0
+        while tried < self._BUILD_CIRCUIT_TIMEOUT:
             g = self.chooseRandomGuard()
             assert (g)
 
@@ -228,10 +224,18 @@ class Client(object):
                 # See: channel_do_open_actions()
                 # In our simulation, we just ignore this guard
                 # and try again.
+                self._stats.failuresUntilSuccess(tried)
                 continue
 
             if succeeded:
+                self._stats.failuresUntilSuccess(tried)
                 return g # our circuit
+
+            tried += 1
+
+        print("Timed out while trying to build a circuit")
+        self._stats.failuresUntilTimeout(tried)
+        return False
 
     # Returns True iff previous guards will be retried later
     def entryGuardRegisterConnectStatus(self, guard, succeeded):

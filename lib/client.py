@@ -59,8 +59,12 @@ class Stats(object):
     def __init__(self):
         # Statistics keeping variables:
         self._GUARD_BANDWIDTHS = []
-        self._CIRCUIT_FAILURES_TOTAL = 0
         self._CIRCUIT_FAILURES = 0
+        self._CIRCUIT_SUCCESSES = 0
+        self._CIRCUIT_HARD_FAILURES = 0
+
+        self._GUARDS_UNTIL_FIRST_SUCCESS = None
+        self._FAILURES_UNTIL_FIRST_SUCCESS = None
 
         self._EXPOSED_TO_GUARDS = []
         self._EXPOSURE_AT = {}
@@ -71,12 +75,47 @@ class Stats(object):
 
         exp = self._EXPOSURE_AT[when] = len(self._EXPOSED_TO_GUARDS)
 
-    def incrementCircuitFailureCount(self):
-        self._CIRCUIT_FAILURES += 1
+    def successRate(self):
+        total = self.totalCircuits()
+        return self._CIRCUIT_SUCCESSES / float(total) * 100.0
 
-    def resetCircuitFailureCount(self):
-        self._CIRCUIT_FAILURES_TOTAL += self._CIRCUIT_FAILURES
-        self._CIRCUIT_FAILURES = 0
+    def circuitFailures(self):
+        return self._CIRCUIT_HARD_FAILURES + self._CIRCUIT_FAILURES
+
+    def circuitSuccesses(self):
+        return self._CIRCUIT_SUCCESSES
+
+    def totalCircuits(self):
+        return self.circuitFailures() + self.circuitSuccesses()
+
+    def successfulCircuits(self):
+        return self._CIRCUIT_SUCCESSES
+
+    def failuresUntilFirstSuccess(self):
+        if not self._FAILURES_UNTIL_FIRST_SUCCESS:
+            return self.circuitFailures()
+
+        return self._FAILURES_UNTIL_FIRST_SUCCESS
+
+    def exposureUntilFirstSuccess(self):
+        if not self._GUARDS_UNTIL_FIRST_SUCCESS:
+            return self.guardsExposureAfter(simtime.now())
+
+        return self._GUARDS_UNTIL_FIRST_SUCCESS
+
+    def failuresUntilTimeout(self, num):
+        self._CIRCUIT_FAILURES += num-1
+        self._CIRCUIT_HARD_FAILURES += 1
+
+    def failuresUntilSuccess(self, num):
+        self._CIRCUIT_FAILURES += num
+        self._CIRCUIT_SUCCESSES += 1
+
+        if not self._GUARDS_UNTIL_FIRST_SUCCESS:
+            self._GUARDS_UNTIL_FIRST_SUCCESS = self.guardsExposureAfter(simtime.now())
+
+        if not self._FAILURES_UNTIL_FIRST_SUCCESS:
+            self._FAILURES_UNTIL_FIRST_SUCCESS = self.circuitFailures()
 
     def averageGuardBandwidth(self):
         if not self._GUARD_BANDWIDTHS:
@@ -193,17 +232,18 @@ class Client(object):
 
 
         tried = 0
-
         while tried < self._BUILD_CIRCUIT_TIMEOUT:
             guard = gs.nextGuard()
             circuit = self.composeCircuitAndConnect(guard)
             if not gs.shouldContinue(circuit != None):
                 gs.end(guard)
+                self._stats.failuresUntilSuccess(tried)
                 return circuit
 
             tried += 1
 
         print("Timed out while trying to build a circuit")
+        self._stats.failuresUntilTimeout(tried)
         return False
 
     def composeCircuitAndConnect(self, guard):

@@ -50,8 +50,6 @@ def trivialSimulation(args):
 
     ok = 0
     bad = 0
-    numTriedGuards = 0
-    timeUntilFirstCircuit = 0
 
     for period in xrange(30):  # one hour each
         for subperiod in xrange(30):  # two minutes each
@@ -64,17 +62,8 @@ def trivialSimulation(args):
             cc = gc()
 
             for attempts in xrange(6):  # 20 sec each
-
                 # actually have the client act.
-                if cc.buildCircuit():
-                    ok += 1
-                else:
-                    bad += 1
-
-                # Our first success
-                if ok == 1:
-                    numTriedGuards = stats.guardsExposureAfter(simtime.now())
-                    timeUntilFirstCircuit = simtime.now()
+                cc.buildCircuit()
 
                 # time passed
                 simtime.advanceTime(20)
@@ -83,9 +72,9 @@ def trivialSimulation(args):
         if sameclient:
             c.updateGuardLists()
 
-    print("Successful client circuits (total): %d (%d)" % (ok, (ok + bad)))
-    print("Percentage of successful circuits:  %f%%"
-          % ((ok / float(ok + bad)) * 100.0))
+    print("Successful client circuits (total): %d (%d)" % (
+        stats.successfulCircuits(), stats.totalCircuits()))
+    print("Percentage of successful circuits:  %f%%" % stats.successRate())
     print("Average guard bandwidth capacity:   %d KB/s" % stats.averageGuardBandwidth())
 
     # This does not make sense with -C
@@ -96,9 +85,8 @@ def trivialSimulation(args):
              )
           )
 
-    print("Number of guards we tried before succeeding first circuit:   %d" % numTriedGuards)
-    print("Time until the first circuit is built:   %d" % timeUntilFirstCircuit)
-
+    print("Number of guards we tried before succeeding first circuit:   %d" % stats.exposureUntilFirstSuccess())
+    print("Failures until the first circuit is built:   %d" % stats.failuresUntilFirstSuccess())
     print("Total simulation time:    %d" % simtime.now())
 
 

@@ -5,12 +5,15 @@ FILENAME="scenario${OPS}"
 mkdir -p ./out
 
 echo "Plotting ${@:1} to out/$FILENAME"
-
 echo "success total success-rate capacity 1 15 30 exposure-1 exposure-15 exposure-30 guards-till-first-circuit time-till-first-circuit total-time" > ./out/${FILENAME}.txt
 ./simulate "${@:1}" >> ./out/${FILENAME}.txt
 
+# success rate points
+#gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; set yrange [0:110]; plot './out/${FILENAME}.txt' using 3 with points" \
+#  > ./out/success_rate_with_${FILENAME}.png
+
 # success rate
-gnuplot -p -e "set terminal png size 700,300; set key autotitle columnhead; set key outside; set key bottom; set yrange [0:110]; plot './out/${FILENAME}.txt' using 3 with points" \
+gnuplot -p -e "set terminal png size 700,300; set style fill solid; set key autotitle columnhead; set key outside; set key bottom; set yrange [:100]; set xrange [0:]; plot './out/${FILENAME}.txt' using 3 with boxes" \
   > ./out/success_rate_with_${FILENAME}.png
 
 # exposure

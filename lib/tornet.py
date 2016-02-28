@@ -274,9 +274,9 @@ class EvilFilteringNetwork(_NetworkDecorator):
         self._pblock = pBlockGood
 
     def probe_node_is_up(self, node):
-        if not node.isReallyEvil():
-            if random.random() < self._pblock:
-                return False
+        if not node.isReallyEvil() and random.random() < self._pblock:
+            return False
+
         return self._network.probe_node_is_up(node)
 
 

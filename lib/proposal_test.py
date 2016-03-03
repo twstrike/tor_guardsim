@@ -12,7 +12,6 @@ import client
 import proposal
 import guard
 
-
 #stats = client.Stats()
 #client.Client
 # if cc.buildCircuit():
@@ -37,7 +36,7 @@ def triedAndSucceeded(g, when):
 
 def createGuard():
     node = tornet.Node("some node", random.randint(1, 65535))
-    g = guard.GetGuard(node)
+    g = guard.Guard.get(node)
     return g
 
 class TestProposal259(unittest.TestCase):
@@ -57,7 +56,7 @@ class TestProposal259(unittest.TestCase):
 
         params = client.ClientParams()
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
 
         expectedPrimary = [g for g in used if g != notInConsensus]
         self.assertEqual(algo._primaryGuards, expectedPrimary)
@@ -70,7 +69,7 @@ class TestProposal259(unittest.TestCase):
 
         params = client.ClientParams()
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
 
         chosen = algo.nextGuard()
 
@@ -103,7 +102,7 @@ class TestProposal259(unittest.TestCase):
         params = client.ClientParams()
         params.GUARDS_TRY_THRESHOLD = 0.04 # 4 guards, so it does not fail
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
 
         chosen = algo.nextGuard()
 
@@ -150,7 +149,7 @@ class TestProposal259(unittest.TestCase):
         params.GUARDS_TRY_THRESHOLD = 0.02 # 2 guards
 
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
 
         chosen = algo.nextGuard()
 
@@ -169,7 +168,7 @@ class TestProposal259(unittest.TestCase):
         params.GUARDS_FAILOVER_THRESHOLD = 2
 
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
 
         chosen = algo.nextGuard()
 
@@ -188,7 +187,7 @@ class TestProposal259(unittest.TestCase):
         params.GUARDS_FAILOVER_THRESHOLD = 2
 
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
 
         chosen = algo.nextGuard()
         self.assertEqual(chosen, used[-1])
@@ -239,7 +238,7 @@ class TestProposal259(unittest.TestCase):
         params.GUARDS_RETRY_TIME = params.PRIMARY_GUARDS_RETRY_INTERVAL - 1
 
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
         # Move to STATE_TRY_UTOPIC
         chosen = algo.nextGuard()
         self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
@@ -264,7 +263,7 @@ class TestProposal259(unittest.TestCase):
         params.GUARDS_TRY_THRESHOLD = 1
 
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
 
         chosen = algo.nextGuard()
 
@@ -282,7 +281,7 @@ class TestProposal259(unittest.TestCase):
         params.GUARDS_FAILOVER_THRESHOLD = 1
 
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, allGuards, allDystopic)
+        algo.start(used, [], [], [], 3, allGuards, allDystopic)
 
         chosen = algo.nextGuard()
 
@@ -300,7 +299,7 @@ class TestProposal259(unittest.TestCase):
         params.GUARDS_TRY_THRESHOLD = 0.5
 
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], 3, allGuards, allDystopic)
+        algo.start(used, [], [], [], 3, allGuards, allDystopic)
 
         # Move time to equal last attempt
         simtime.advanceTime(30)

@@ -188,7 +188,7 @@ class Client(object):
         """Try to build a circuit until we succeeded, or timeout."""
         gs = proposal.ChooseGuardAlgorithm(self._p)
 
-        gs.start(self._usedGuards, [], self._p.N_PRIMARY_GUARDS,
+        gs.start(self._usedGuards, [], [], [], self._p.N_PRIMARY_GUARDS,
                  self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
 

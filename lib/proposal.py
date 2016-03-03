@@ -152,8 +152,9 @@ class ChooseGuardAlgorithm(object):
         self.STATE_TRY_DYSTOPIC = StateTryDystopic()
         self.STATE_RETRY_ONLY = StateRetryOnly()
 
-    def start(self, usedGuards, excludeNodes, nPrimaryGuards, guardsInConsensus, dystopicGuardsInConsensus,
-              selectDirGuards=False):
+    def start(self, usedGuards, sampledUtopicGuards, sampledDystopicGuards,
+              excludeNodes, nPrimaryGuards, guardsInConsensus,
+              dystopicGuardsInConsensus, selectDirGuards=False):
         self._usedGuards = usedGuards
 
         excludeNodesSet = set(excludeNodes)

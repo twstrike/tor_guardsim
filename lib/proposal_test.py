@@ -37,6 +37,7 @@ def triedAndSucceeded(g, when):
 def createGuard():
     node = tornet.Node("some node", random.randint(1, 65535))
     g = guard.Guard.get(node)
+    g.markListed()
     return g
 
 class TestProposal259(unittest.TestCase):
@@ -49,7 +50,7 @@ class TestProposal259(unittest.TestCase):
 
     def test_choose_primary_guards_with_preference_to_USED_GUARDS(self):
         notInConsensus = createGuard()
-        notInConsensus._bad = True
+        notInConsensus.markUnlisted()
 
         used = [createGuard(), notInConsensus, createGuard(), createGuard()]
         allDystopic = []

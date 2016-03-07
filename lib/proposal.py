@@ -239,14 +239,15 @@ class ChooseGuardAlgorithm(object):
         if not self.wasNotPossibleToConnect(guard):
             return None
 
-        self.markAsUnreachable(guard)
+        # We already use the unreachableSince, so no need to mark as unreachable
         if not guard in triedList: triedList.append(guard)
         return guard
 
     def wasNotPossibleToConnect(self, guard):
-        return not tor.entry_is_live(guard)
-        # return guard._unreachableSince != None
-        # return guard._madeContact == False
+        # Using entry_is_live() would add existing progressive retry window
+        # strategy. For now, we keep it clean from previous tor implementation.
+        # return not tor.entry_is_live(guard)
+        return guard._unreachableSince != None
 
     def markAsUnreachable(self, guard):
         if not guard._unreachableSince:

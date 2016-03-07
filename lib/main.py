@@ -77,7 +77,7 @@ def trivialSimulation(args):
     print("Percentage of successful circuits:  %f%%" % stats.successRate())
     print("Average guard bandwidth capacity:   %d KB/s" % stats.averageGuardBandwidth())
 
-    # This does not make sense with -C
+    # XXX Make sure this makes sense with -C
     print("Exposure to new guards after 1/15/30 hours:   %s, %s, %s"
           % (stats.guardsExposureAfter(60 * 60),
              stats.guardsExposureAfter(15 * 60 * 60) - stats.guardsExposureAfter(60 * 60),

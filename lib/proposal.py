@@ -31,8 +31,6 @@ class StatePrimaryGuards(object):
 
 class StateTryUtopic(object):
     def next(self, context):
-        print("StateTryUtopic - NEXT")
-
         # This should add back to REMAINING_UTOPIC_GUARDS but
         # when are they removed from REMAINING_UTOPIC_GUARDS?
         context.moveOldTriedGuardsToRemainingList()
@@ -209,21 +207,27 @@ class ChooseGuardAlgorithm(object):
         return not success
 
     def nextGuard(self):
-        haveBeenTriedLately = self._hasAnyPrimaryGuardBeenTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
-        if haveBeenTriedLately and self._state != self.STATE_PRIMARY_GUARDS:
-            # This is intended to retry ALL PRIMARY_GUARDS, but should we really
-            # retry ALL of them if only one has been tried more than
-            # PRIMARY_GUARDS_RETRY_INTERVAL minutes ago?
-            # What if another one of them has just been tried?
-
+        pgsToRetry = self._primaryGuardsTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
+        if pgsToRetry and self._state != self.STATE_PRIMARY_GUARDS:
             # Mark for retry is the strategy tor currently uses. But comparing
             # to tor code, this happens when a new guard is successfully
             # connectected to for the first time.
-            self.markForRetry(self._primaryGuards)
+            self.markForRetry(pgsToRetry)
             self._previousState = self._state
             return self.transitionTo(self.STATE_PRIMARY_GUARDS)
 
         return self._state.next(self)
+
+
+    # we should first check if it
+    #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried
+    #     any of the PRIMARY_GUARDS
+    def _primaryGuardsTriedIn(self, interval):
+        now = simtime.now()
+        seconds = interval * 60
+        return [g for g in self._primaryGuards
+                if g._lastTried and g._lastTried + seconds < now]
+
 
     def getFirstByBandwidthAndAddUnreachableTo(self, remaining, tried):
         guards = list(remaining)  # must be a list to use nextByBandwidth
@@ -258,8 +262,6 @@ class ChooseGuardAlgorithm(object):
         threshold = self._params.GUARDS_TRY_THRESHOLD * len(self._guards)
         tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
 
-        print("tried = %s, threshold = %s" % (len(tried), threshold))
-
         if len(tried) > threshold:
             # Threshold Failed
             return (False, self.transitionTo(self.STATE_RETRY_ONLY))
@@ -267,7 +269,6 @@ class ChooseGuardAlgorithm(object):
         return (True, None)
 
     def checkFailover(self, triedGuards, guards, nextState):
-        print("checkFailover: tried = %d, guards = %d " % (len(triedGuards), len(guards)))
         if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
             # Threshold Failed
             return (False, self.transitionTo(nextState))
@@ -345,16 +346,3 @@ class ChooseGuardAlgorithm(object):
             return self.chooseRandomFrom(remainingUtopic)
 
         return usedGuards.pop(0)
-
-
-    # we should first check if it
-    #   was at least PRIMARY_GUARDS_RETRY_INTERVAL minutes since we tried
-    #     any of the PRIMARY_GUARDS
-    def _hasAnyPrimaryGuardBeenTriedIn(self, interval):
-        now = simtime.now()
-        for pg in self._primaryGuards:
-            if not pg._lastTried: continue
-            if pg._lastTried + interval * 60 < now:
-                return True
-
-        return False

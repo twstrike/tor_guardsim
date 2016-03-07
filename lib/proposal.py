@@ -144,7 +144,6 @@ class ChooseGuardAlgorithm(object):
         self._guardsInConsensus = []
         self._dystopicGuardsInConsensus = []
 
-        self._lastReturn = None
         self._previousState = None
 
         self.STATE_PRIMARY_GUARDS = StatePrimaryGuards()
@@ -224,10 +223,7 @@ class ChooseGuardAlgorithm(object):
             self._previousState = self._state
             return self.transitionTo(self.STATE_PRIMARY_GUARDS)
 
-        self._lastReturn = None
-        g = self._state.next(self)
-
-        return g or self._lastReturn
+        return self._state.next(self)
 
     def getFirstByBandwidthAndAddUnreachableTo(self, remaining, tried):
         guards = list(remaining)  # must be a list to use nextByBandwidth

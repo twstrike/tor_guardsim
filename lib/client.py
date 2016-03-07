@@ -262,7 +262,6 @@ class Client(object):
 	if not guard: return False
 
         succeeded = self.connectToGuard(guard)
-
 	self.entryGuardRegisterConnectStatus(guard, succeeded)
 
         return succeeded
@@ -278,13 +277,22 @@ class Client(object):
                 guard._unreachableSince = None
                 guard._lastAttempted = now
 
-            # First contact made with this guard
             if not guard._madeContact:
+                # tor original code ignores this guard and marks for retry
+                # every unreachable guard positioned before it in USED_GUARDS
+                # this heuristics attempts to detect network reconnects.
+                # For now, we ignore this existing heuristic.
                 guard._madeContact = True
+
         else:
             if not guard._madeContact:
-                pass  # remove this guard
-            elif not guard._unreachableSince:
+                # tor original code removes this guard from the list, and return
+                # This prevents retrying to connect to guards we never made
+                # contact. What should we do?
+                # For now, we ignore this existing heuristic.
+                pass
+
+            if not guard._unreachableSince:
                 guard._unreachableSince = now
                 guard._lastAttempted = now
                 guard._canRetry = False
@@ -292,3 +300,4 @@ class Client(object):
             else:
                 guard._canRetry = False
                 guard._lastAttempted = now
+

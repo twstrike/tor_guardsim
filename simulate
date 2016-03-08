@@ -2,8 +2,9 @@
 
 TIMES=100
 
+echo "success total success-rate capacity 1 15 30 exposure-1 exposure-15 exposure-30 guards-till-first-circuit time-till-first-circuit total-time"
+
 for i in `seq 1 $TIMES`;
 do
-  OUTPUT=$(./lib/main.py ${@:1} | tail -n 7 | grep -E "[0-9.]+" -o | xargs)
-  echo "$OUTPUT"
+  echo $(./lib/main.py ${@:1} | tail -n 7 | grep -E "[0-9.]+" -o | xargs)
 done

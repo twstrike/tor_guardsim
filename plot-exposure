@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# This is crazy but I could not manage to get the "stats" command working with
+# rowstacked histograms.
+SCENARIO="$1"
+MAX_EXPOSURE=$(
+  (
+    tail -n +1 ${SCENARIO}_legacy.txt | cut -d " " -f 8-10 ;
+    tail -n +1 ${SCENARIO}_proposal.txt | cut -d " " -f 8-10
+  ) | tr " " "+" | bc | sort -n -r | head -n 1
+)
+
+# exposure
+SCRIPT="
+max_y = $MAX_EXPOSURE + 1;
+
+set terminal png size 700,300;
+
+set multiplot layout 1,2 columnsfirst title \"{/:Bold=15 Exposure Rate (1, 15 and 30 hrs)}\";
+
+unset xtics;
+set ytics;
+set yrange [0:max_y];
+set key off;
+set style data histograms;
+set style fill solid border;
+set style histogram rowstacked;
+set boxwidth 1 relative;
+
+set title \"Original Algorithm\";
+plot for[COL=8:10] '${SCENARIO}_legacy.txt' using COL title columnheader;
+
+set title \"Proposal\";
+plot for[COL=8:10] '${SCENARIO}_proposal.txt' using COL title columnheader;
+
+unset multiplot;
+"
+
+gnuplot -p -e "$SCRIPT"
+

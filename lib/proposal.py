@@ -9,10 +9,9 @@ import pprint
 def canRetry(g):
     return g._canRetry
 
+
 class StatePrimaryGuards(object):
     def next(self, context):
-        # print("StatePrimaryGuards - NEXT")
-
         # Using tor.entry_is_live(g) rather than wasNotPossibleToConnect()
         # in markAsUnreachableAndAddToTried() whould remove the need of canRetry(),
         # and also add the same retry conditions tor currently has.
@@ -20,14 +19,9 @@ class StatePrimaryGuards(object):
             if canRetry(g) or not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g
 
-        ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
-        if not ok: return fromTransition
-
         if context.allHaveBeenTried():
             return context.transitionToPreviousStateOrTryUtopic()
 
-        # is it possible?
-        print("No threshold has failed")
 
 class StateTryUtopic(object):
     def next(self, context):
@@ -37,34 +31,18 @@ class StateTryUtopic(object):
 
         # Try previously used guards. They were PRIMARY_GUARDS at some point.
         # Why did they leave the PRIMARY_GUARDS list?
-        guards = [g for g in context._usedGuards if g not in context._primaryGuards]
+        guards = [g for g in context._usedGuards
+                  if g not in context._primaryGuards]
         for g in guards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
                 return g
-
-        ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
-        if not ok: return fromTransition
-
-        ok, fromTransition = context.checkFailover(context._triedGuards,
-                                     context._utopicGuards,
-                                     context.STATE_TRY_DYSTOPIC)
-        if not ok: return fromTransition
 
         g = context.getFirstByBandwidthAndAddUnreachableTo(context._remainingUtopicGuards,
                 context._triedGuards)
         if g: return g
 
-        # one more time
-        ok, fromTransition = context.checkTriedThreshold(context._triedGuards)
-        if not ok: return fromTransition
+        context.transitionTo(context.STATE_TRY_DYSTOPIC)
 
-        ok, fromTransition = context.checkFailover(context._triedGuards,
-                                     context._utopicGuards,
-                                     context.STATE_TRY_DYSTOPIC)
-        if not ok: return fromTransition
-
-        # is it possible?
-        print("No threshold has failed")
 
 class StateTryDystopic(object):
     def next(self, context):

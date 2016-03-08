@@ -62,15 +62,16 @@ class TestProposal259(unittest.TestCase):
         expectedPrimary = [g for g in used if g != notInConsensus]
         self.assertEqual(algo._primaryGuards, expectedPrimary)
 
-    def test_STATE_PRIMARY_GUARD_should_return_each_reachable_guard_in_turn(self):
-        unreachableGuard = triedAndFailed(createGuard(), 10)
 
+    def test_STATE_PRIMARY_GUARD_returns_each_reachable_guard_in_turn(self):
+        unreachableGuard = triedAndFailed(createGuard(), 10)
         used = [unreachableGuard, createGuard(), createGuard()]
+        allGuards = [createGuard()]
         allDystopic = []
 
         params = client.ClientParams()
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, allGuards, allDystopic)
 
         chosen = algo.nextGuard()
 
@@ -90,30 +91,29 @@ class TestProposal259(unittest.TestCase):
         triedAndFailed(chosen, 20)
         chosen = algo.nextGuard()
 
+        # Once all used guards are gone should return utopic guards
         self.assertEqual(algo._triedGuards, used[0:3])
-
-        # self.assertEqual(algo._state, algo.STATE_PRIMARY_GUARDS)
-        # XXX Should it really return NONE?
-        self.assertEqual(chosen, None)
+        self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
+        self.assertEqual(chosen, allGuards[0])
 
     # TODO: Add scenarios that involve having sampled nodes to simulate
     # non-fresh runs.
     
     def test_NEXT_should_retry_PRIMARY_GUARDS(self):
         used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]
+        allGuards = [createGuard()]
         allDystopic = []
 
         params = client.ClientParams()
         params.GUARDS_TRY_THRESHOLD = 0.04 # 4 guards, so it does not fail
         algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
+        algo.start(used, [], [], [], 3, allGuards, allDystopic)
 
         chosen = algo.nextGuard()
 
-        self.assertEqual(algo._state, algo.STATE_TRY_DYSTOPIC)
+        self.assertEqual(algo._state, algo.STATE_TRY_UTOPIC)
         self.assertEqual(algo._triedGuards, used)
-        # XXX Should it really return NONE?
-        self.assertEqual(chosen, None)
+        self.assertEqual(chosen, allGuards[0])
 
         # At least one have been tried more than PRIMARY_GUARDS_RETRY_INTERVAL
         # minutes ago

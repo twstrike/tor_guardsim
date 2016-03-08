@@ -237,6 +237,7 @@ class Client(object):
         tried = 0
         while tried < self._BUILD_CIRCUIT_TIMEOUT:
             guard = gs.nextGuard()
+            if not guard: continue # state transition
             circuit = self.composeCircuitAndConnect(guard)
             if not gs.shouldContinue(circuit != None):
                 gs.end(guard)

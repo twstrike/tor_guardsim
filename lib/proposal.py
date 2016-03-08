@@ -129,8 +129,8 @@ class ChooseGuardAlgorithm(object):
 
     # How should the transition happen? Immediately or on the next call to NEXT?
     def transitionTo(self, state):
-        #return self.transitionOnNextCall(state)
-        return self.transitionImmediatelyTo(state)
+        return self.transitionOnNextCall(state)
+        # return self.transitionImmediatelyTo(state)
 
     def transitionOnNextCall(self, state):
         print("! Transitioned to %s" % state)

@@ -28,6 +28,7 @@ class ClientParams(object):
                  RETRY_DELAY=30,
                  RETRY_MULT=2,
                  PRIORITIZE_BANDWIDTH=True,
+                 INTERNET_LIKELY_DOWN_INTERVAL=5,
                  DISJOINT_SETS=False):
         # From asn's post and prop259.  This should be a consensus parameter.
         # It stores the number of guards in {U,DYS}TOPIC_GUARDLIST which we
@@ -51,6 +52,8 @@ class ClientParams(object):
         self.GUARDS_FAILOVER_THRESHOLD = 0.02
 
         self.PRIORITIZE_BANDWIDTH = PRIORITIZE_BANDWIDTH
+
+        self.INTERNET_LIKELY_DOWN_INTERVAL = INTERNET_LIKELY_DOWN_INTERVAL
 
 class Stats(object):
     """Contains information about the stats of several runs over potentially

@@ -17,6 +17,7 @@ class StatePrimaryGuards(object):
         # and also add the same retry conditions tor currently has.
         for g in context._primaryGuards:
             if canRetry(g) or not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
+                context._recordReturn(g)
                 return g
 
         if context.allHaveBeenTried():
@@ -35,11 +36,14 @@ class StateTryUtopic(object):
                   if g not in context._primaryGuards]
         for g in guards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
+                context._recordReturn(g)
                 return g
 
         g = context.getFirstByBandwidthAndAddUnreachableTo(context._remainingUtopicGuards,
                 context._triedGuards)
-        if g: return g
+        if g:
+            context._recordReturn(g)
+            return g
 
         context.transitionTo(context.STATE_TRY_DYSTOPIC)
 
@@ -53,11 +57,14 @@ class StateTryDystopic(object):
 
         for g in guards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedDystopicGuards):
+                context._recordReturn(g)
                 return g
 
         g = context.getFirstByBandwidthAndAddUnreachableTo(
                 context._remainingDystopicGuards, context._triedDystopicGuards)
-        if g: return g
+        if g:
+            context._recordReturn(g)
+            return g
 
         context.transitionTo(context.STATE_PRIMARY_GUARDS)
 
@@ -77,6 +84,8 @@ class ChooseGuardAlgorithm(object):
         self._primaryGuards = []
         self._guardsInConsensus = []
         self._dystopicGuardsInConsensus = []
+        
+        self._returnedAt = 0
 
         self._previousState = None
 
@@ -138,10 +147,17 @@ class ChooseGuardAlgorithm(object):
 
     def shouldContinue(self, success):
         if success:
-            self.transitionOnNextCall(self.STATE_PRIMARY_GUARDS)
-            return True
+            secsToWait = self._params.INTERNET_LIKELY_DOWN_INTERVAL * 60
+            if self._returnedAt + secsToWait < simtime.now():
+                self._state = self.STATE_PRIMARY_GUARDS
+                return True
+            else:
+                return False
         else:
-            return False
+            return True
+
+    def _recordReturn(self, guard):
+        self._returnedAt = simtime.now()
 
 
     def nextGuard(self):

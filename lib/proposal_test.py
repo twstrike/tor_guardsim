@@ -215,6 +215,48 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(chosen, algo._remainingUtopicGuards.pop())
 
 
+    def test_SHOULD_CONTINUE_returns_true_when_circuit_failed(self):
+        used = [createGuard()]
+        allDystopic = []
+
+        params = client.ClientParams()
+
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
+        algo.nextGuard()
+
+        self.assertEqual(algo.shouldContinue(False), True)
+
+
+    def test_SHOULD_CONTINUE_returns_false_when_circuit_succeeds_but_interval_not_elapsed(self):
+        used = [createGuard()]
+        allDystopic = []
+
+        params = client.ClientParams()
+
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
+        algo.nextGuard()
+
+        self.assertEqual(algo.shouldContinue(True), False)
+
+
+    def test_SHOULD_CONTINUE_returns_true_when_circuit_succeeds_and_interval_has_elapsed(self):
+        used = [createGuard()]
+        allDystopic = []
+
+        params = client.ClientParams()
+
+        algo = proposal.ChooseGuardAlgorithm(params)
+        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
+
+        algo.nextGuard()
+        interval = params.INTERNET_LIKELY_DOWN_INTERVAL * 60
+        simtime.advanceTime(interval + 1)
+
+        self.assertEqual(algo.shouldContinue(True), True)
+
+
 if __name__ == '__main__':
     unittest.main()
 

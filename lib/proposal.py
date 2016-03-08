@@ -46,36 +46,21 @@ class StateTryUtopic(object):
 
 class StateTryDystopic(object):
     def next(self, context):
-        # print("StateTryDystopic - NEXT")
-
         context.moveOldTriedDystopicGuardsToRemainingList()
 
-        distopicGuards = [g for g in context._usedGuards if g._node.seemsDystopic()]
-        guards = [g for g in distopicGuards if g not in context._primaryGuards]
+        distopic = [g for g in context._usedGuards if g._node.seemsDystopic()]
+        guards = [g for g in distopic if g not in context._primaryGuards]
 
         for g in guards:
             if not context.markAsUnreachableAndAddToTried(g, context._triedDystopicGuards):
                 return g
 
-        ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
-        if not ok: return fromTransition
-
-        ok, fromTransition = context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
-        if not ok: return fromTransition
-
         g = context.getFirstByBandwidthAndAddUnreachableTo(
                 context._remainingDystopicGuards, context._triedDystopicGuards)
         if g: return g
 
-        # one more time
-        ok, fromTransition = context.checkTriedThreshold(context._triedGuards + context._triedDystopicGuards)
-        if not ok: return fromTransition
+        context.transitionTo(context.STATE_PRIMARY_GUARDS)
 
-        ok, fromTransition = context.checkTriedDystopicFailoverAndMarkAllAsUnreachable()
-        if not ok: return fromTransition
-
-        # is it possible?
-        print("No threshold has failed")
 
 class StateRetryOnly(object):
     def __init__(self):

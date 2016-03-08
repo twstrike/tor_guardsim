@@ -9,13 +9,6 @@ FILENAME="scenario${OPS}"
 ./simulate "${@:1} --legacy" > ./out/${FILENAME}_legacy.txt
 ./simulate "${@:1}" > ./out/${FILENAME}_proposal.txt
 
-# success rate
-# TODO: compare them side by side
-gnuplot -p -e "set terminal png size 700,300; set style fill solid; set key autotitle columnhead; set key outside; set key bottom; set yrange [:100]; set xrange [0:]; plot './out/${FILENAME}_legacy.txt' using 3 with boxes" \
-  > ./out/success_rate_with_${FILENAME}_legacy.png
-
-gnuplot -p -e "set terminal png size 700,300; set style fill solid; set key autotitle columnhead; set key outside; set key bottom; set yrange [:100]; set xrange [0:]; plot './out/${FILENAME}_proposal.txt' using 3 with boxes" \
-  > ./out/success_rate_with_${FILENAME}_proposal.png
-
+./plot-success ./out/${FILENAME} > ./out/success_${OPS}.png
 ./plot-exposure ./out/${FILENAME} > ./out/exposure_${OPS}.png
 

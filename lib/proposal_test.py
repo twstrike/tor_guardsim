@@ -196,22 +196,6 @@ class TestProposal259(unittest.TestCase):
         self.assertEqual(algo._triedGuards, used) # the 4th is now tried
 
 
-    def test_STATE_TRY_UTOPIC_transitions_to_STATE_TRY_DYSTOPIC_when_larger_failover(self):
-        used = [triedAndFailed(createGuard(), (n+1)*10) for n in xrange(3)]
-        allDystopic = [createGuard()]
-
-        params = client.ClientParams()
-        params.GUARDS_TRY_THRESHOLD = 1
-
-        algo = proposal.ChooseGuardAlgorithm(params)
-        algo.start(used, [], [], [], 3, self.ALL_GUARDS, allDystopic)
-
-        chosen = algo.nextGuard()
-
-        self.assertEqual(algo._state, algo.STATE_TRY_DYSTOPIC)
-        self.assertEqual(chosen, allDystopic[0])
-
-
     def test_STATE_TRY_UTOPIC_returns_guard_from_REMAINING_UTOPIC_GUARDS(self):
         allGuards = [createGuard() for n in xrange(4)]
         used = [triedAndFailed(allGuards[n], (n+1)*10) for n in xrange(3)]

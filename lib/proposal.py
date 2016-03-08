@@ -45,7 +45,7 @@ class StateTryUtopic(object):
             context._recordReturn(g)
             return g
 
-        context.transitionTo(context.STATE_TRY_DYSTOPIC)
+        return context.transitionTo(context.STATE_TRY_DYSTOPIC)
 
 
 class StateTryDystopic(object):
@@ -66,7 +66,7 @@ class StateTryDystopic(object):
             context._recordReturn(g)
             return g
 
-        context.transitionTo(context.STATE_PRIMARY_GUARDS)
+        return context.transitionTo(context.STATE_PRIMARY_GUARDS)
 
 
 class ChooseGuardAlgorithm(object):

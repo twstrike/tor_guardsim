@@ -196,23 +196,6 @@ class ChooseGuardAlgorithm(object):
         if not guard._unreachableSince:
             guard._unreachableSince = simtime.now()
 
-    def checkTriedThreshold(self, guards):
-        timeWindow = simtime.now() - self._params.GUARDS_TRY_THRESHOLD_TIME * 60
-        threshold = self._params.GUARDS_TRY_THRESHOLD * len(self._guards)
-        tried = [g for g in guards if g._lastTried and g._lastTried > timeWindow]
-
-        if len(tried) > threshold:
-            # Threshold Failed
-            return (False, self.transitionTo(self.STATE_RETRY_ONLY))
-
-        return (True, None)
-
-    def checkFailover(self, triedGuards, guards, nextState):
-        if len(triedGuards) > self._params.GUARDS_FAILOVER_THRESHOLD * len(guards):
-            # Threshold Failed
-            return (False, self.transitionTo(nextState))
-
-        return (True, None)
 
     def checkTriedDystopicFailoverAndMarkAllAsUnreachable(self):
         ok, fromTransition = self.checkFailover(self._triedDystopicGuards,

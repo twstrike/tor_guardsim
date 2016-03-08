@@ -62,34 +62,6 @@ class StateTryDystopic(object):
         context.transitionTo(context.STATE_PRIMARY_GUARDS)
 
 
-class StateRetryOnly(object):
-    def __init__(self):
-        self._shouldMarkForRetry = True
-
-    def next(self, context):
-        # print("StateRetryOnly - NEXT")
-        guards = context._triedGuards + context._triedDystopicGuards
-        guards.sort(key=lambda g: g._lastTried)
-
-        # It will only reach this state if everything has failed so far, so if
-        # we filter to return only the guards that are not currently unreachable
-        # it wont return anything.
-        # We should either not ignore unreachable OR mark all of them for retry
-        # before doing this the first time. We chose mark them for retry.
-        if self._shouldMarkForRetry:
-            context.markForRetry(guards)
-            self._shouldMarkForRetry = False
-
-        for g in guards:
-            if context.wasNotPossibleToConnect(g): continue
-            return g
-
-        # What if it exhaustes this list?
-        # We mark them for retry and keep returning - this is an infinite loop
-        # anyways.
-        self._shouldMarkForRetry = True
-        print("Exhausted tried list")
-
 class ChooseGuardAlgorithm(object):
     def __repr__(self):
         vals = vars(self)
@@ -97,6 +69,7 @@ class ChooseGuardAlgorithm(object):
             "_state", "_previousState", "_primaryGuards", "_triedGuards"]
                     }
         return pprint.pformat(filtered, indent=4, width=1)
+
 
     def __init__(self, params):
         self._params = params
@@ -110,7 +83,7 @@ class ChooseGuardAlgorithm(object):
         self.STATE_PRIMARY_GUARDS = StatePrimaryGuards()
         self.STATE_TRY_UTOPIC = StateTryUtopic()
         self.STATE_TRY_DYSTOPIC = StateTryDystopic()
-        self.STATE_RETRY_ONLY = StateRetryOnly()
+
 
     def start(self, usedGuards, sampledUtopicGuards, sampledDystopicGuards,
               excludeNodes, nPrimaryGuards, guardsInConsensus,
@@ -164,12 +137,15 @@ class ChooseGuardAlgorithm(object):
             g.markForRetry()
 
     def shouldContinue(self, success):
-        if success and self._state == self.STATE_RETRY_ONLY:
+        if success:
             self.transitionOnNextCall(self.STATE_PRIMARY_GUARDS)
             return True
-        return not success
+        else:
+            return False
+
 
     def nextGuard(self):
+        print("\nSearch next guard with current state %s" % self._state)
         pgsToRetry = self._primaryGuardsTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if pgsToRetry and self._state != self.STATE_PRIMARY_GUARDS:
             # Mark for retry is the strategy tor currently uses. But comparing

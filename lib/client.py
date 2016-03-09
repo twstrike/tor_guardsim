@@ -151,6 +151,7 @@ class Client(object):
         self._p = parameters
 
         self._stats = stats
+	self._GUARD_SELECTION = None
 
         self._USED_GUARDS = []
         self._SAMPLED_UTOPIC_GUARDS = []
@@ -191,6 +192,14 @@ class Client(object):
         self._ALL_GUARDS = self._getGuardsInCurrentConsensus()
         self._ALL_DYSTOPIC = [dg for dg in self._ALL_GUARDS if dg.node.seemsDystopic()]
 
+        # From spec: ensure that all guard profiles are updated with information
+        #   about whether they were in the newest consensus or not
+        # -> Not needed, because they all hold the same guard object references
+        # However, we must ensure that bad guards are ignored and new guards are
+        # added to each list
+	if self._GUARD_SELECTION:
+	    self._GUARD_SELECTION.onNewConsensus(self._ALL_GUARDS, self._ALL_DYSTOPIC)
+
     def markGuard(self, guard, up):
         guard.mark(up)
 
@@ -220,20 +229,20 @@ class Client(object):
 
     def buildCircuit(self):
         """Try to build a circuit until we succeeded, or timeout."""
-        gs = proposal.ChooseGuardAlgorithm(self._p)
+	self._GUARD_SELECTION = proposal.ChooseGuardAlgorithm(self._p)
 
-        gs.start(self._USED_GUARDS,
+        self._GUARD_SELECTION.start(self._USED_GUARDS,
             self._SAMPLED_UTOPIC_GUARDS, self._SAMPLED_DYSTOPIC_GUARDS,
             self._EXCLUDE_NODES, self._p.N_PRIMARY_GUARDS,
             self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
         tried = 0
         while tried < self._BUILD_CIRCUIT_TIMEOUT:
-            guard = gs.nextGuard()
+            guard = self._GUARD_SELECTION.nextGuard()
             if not guard: continue # state transition
             circuit = self.composeCircuitAndConnect(guard)
-            if not gs.shouldContinue(circuit != None):
-                gs.end(guard)
+            if not self._GUARD_SELECTION.shouldContinue(circuit != None):
+                self._GUARD_SELECTION.end(guard)
                 self._stats.failuresUntilSuccess(tried)
                 return circuit
 

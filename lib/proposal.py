@@ -9,7 +9,6 @@ import pprint
 def canRetry(g):
     return g._canRetry
 
-
 class StatePrimaryGuards(object):
     def next(self, context):
         # Using tor.entry_is_live(g) rather than wasNotPossibleToConnect()
@@ -90,6 +89,25 @@ class ChooseGuardAlgorithm(object):
         self.STATE_TRY_UTOPIC = StateTryUtopic()
         self.STATE_TRY_DYSTOPIC = StateTryDystopic()
 
+    def onNewConsensus(self, utopicGuards, dystopicGuards):
+        # Here we ensure all guard profiles wont have bad guards, and
+        # when the bad guards are not bad anymore we ensure they will be back
+        # to each profile in the same position.
+
+        # We dont need to care about USED_GUARDS
+        # Because it is only used to filter out guards from SAMPLED_* and these
+        # sets should not have bad gaurds.
+
+        self._SAMPLED_UTOPIC_THRESHOLD = self._sampleThreshold(utopicGuards)
+        self._SAMPLED_DYSTOPIC_THRESHOLD = self._sampleThreshold(dystopicGuards)
+
+        # Ensure SAMPLED_UTOPIC_GUARDS and SAMPLED_DYSTOPIC_GUARDS meet the thresholds
+        self._fillInSample(self._sampledUtopicGuards, utopicGuards)
+        self._fillInSample(self._sampledDystopicGuards, dystopicGuards)
+
+        # print("sampledUtopicGuards has %d / %d" % (len(self._sampledUtopicGuards), len(self.sampledUtopicGuards)))
+        # print("sampledDystopicGuards has %d / %d" % (len(self._sampledDystopicGuards), len(self.sampledDystopicGuards)))
+
     @property
     def sampledUtopicGuards(self):
         allNotBad = [g for g in self._sampledUtopicGuards if not g.isBad()]
@@ -118,10 +136,9 @@ class ChooseGuardAlgorithm(object):
                 dystopicGuardsInConsensus, selectDirGuards, excludeNodes)
 
         # Fill in samples
-        self._fillInSample(self._sampledUtopicGuards, utopicGuards)
-        self._fillInSample(self._sampledDystopicGuards, dystopicGuards)
+        self.onNewConsensus(utopicGuards, dystopicGuards)
 
-        usedGuardsSet = set(usedGuards)
+        usedGuardsSet = set(self._usedGuards)
         # XXX they should be refilled
         # the spec mentions they should be refilled, but I'm not sure when
         self._remainingUtopicGuards = set(self._sampledUtopicGuards) - usedGuardsSet
@@ -286,4 +303,3 @@ class ChooseGuardAlgorithm(object):
 
     def dystopicUsedGuardsNotPrimary(self):
         return [g for g in self.usedGuardsNotInPrimary() if g._node.seemsDystopic()]
-

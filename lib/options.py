@@ -58,6 +58,10 @@ def makeOptionsParser():
 
     # Other miscellaneous options
     parser.add_argument(
+        "-T", "--total-duration", type=int,
+        help=("Total simulation time in hours. Default: 30"))
+
+    parser.add_argument(
         "-r", "--no-prioritize-bandwidth", action="store_true",
         help=("When selecting a new guard node, the default is to prioritize "
               "nodes with higher bandwidth capacity.  This option causes random "

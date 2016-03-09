@@ -12,6 +12,8 @@ import options
 
 
 def trivialSimulation(args):
+    totalDuration = 30 if not args.total_duration else args.total_duration
+    print("Simulating circuit creation for %d hours" % totalDuration)
     num = 1000 if not args.total_relays else args.total_relays
     print("Number of nodes in simulated Tor network: %d" % num)
 
@@ -51,7 +53,7 @@ def trivialSimulation(args):
     ok = 0
     bad = 0
 
-    for period in xrange(30):  # one hour each
+    for period in xrange(totalDuration):  # one hour each
         for subperiod in xrange(30):  # two minutes each
             if (subperiod % 10) == 0:
                 # nodes left and arrived

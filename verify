@@ -20,3 +20,5 @@ set -xe
 # switch between networks
 ./compare-scenario --switching-network
 
+# network down
+./compare-scenario --network-down --total-duration 1

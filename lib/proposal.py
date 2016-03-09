@@ -137,7 +137,7 @@ class ChooseGuardAlgorithm(object):
         # return self.transitionImmediatelyTo(state)
 
     def transitionOnNextCall(self, state):
-        print("! Transitioned to %s" % state)
+        # print("! Transitioned to %s" % state)
         self._state = state
         return None # The infinite While will see a None to indicate a state transition
 
@@ -165,10 +165,10 @@ class ChooseGuardAlgorithm(object):
 
 
     def nextGuard(self):
-        print("\nSearch next guard with current state %s" % self._state)
+        # print("\nSearch next guard with current state %s" % self._state)
         pgsToRetry = self._primaryGuardsTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if pgsToRetry and self._state != self.STATE_PRIMARY_GUARDS:
-            print("Will retry primary tried more than PRIMARY_GUARDS_RETRY_INTERVAL minutes ago.")
+            # print("Will retry primary tried more than PRIMARY_GUARDS_RETRY_INTERVAL minutes ago.")
             self._previousState = self._state
 
             # I assume this transition is intended to force a retry on ALL primary

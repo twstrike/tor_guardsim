@@ -17,8 +17,6 @@ class StatePrimaryGuards(object):
         # progressive retry conditions tor currently has.
         for g in context._primaryGuards:
             if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
-
-            context._recordReturn(g)
             return g
 
         if context.allHaveBeenTried():
@@ -34,13 +32,10 @@ class StateTryUtopic(object):
         # self.markForRetry(guards)
         for g in guards:
             if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
-
-            context._recordReturn(g)
             return g
 
         g = context.getFirstByBandwidthAndRemoveUnreachable(context._remainingUtopicGuards)
         if g:
-            context._recordReturn(g)
             return g
 
         assert(not context._remainingUtopicGuards)
@@ -56,13 +51,10 @@ class StateTryDystopic(object):
         # self.markForRetry(guards)
         for g in guards:
             if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
-
-            context._recordReturn(g)
             return g
 
         g = context.getFirstByBandwidthAndRemoveUnreachable(context._remainingDystopicGuards)
         if g:
-            context._recordReturn(g)
             return g
 
         assert(not context._remainingDystopicGuards)
@@ -91,8 +83,7 @@ class ChooseGuardAlgorithm(object):
 
         self._primaryGuards = []
         
-        self._returnedAt = 0
-
+        self._lastSuccess = None
         self._previousState = None
 
         self.STATE_PRIMARY_GUARDS = StatePrimaryGuards()
@@ -160,19 +151,17 @@ class ChooseGuardAlgorithm(object):
             g.markForRetry()
 
     def shouldContinue(self, success):
-        if success:
-            secsToWait = self._params.INTERNET_LIKELY_DOWN_INTERVAL * 60
-            if self._returnedAt + secsToWait < simtime.now():
-                self._state = self.STATE_PRIMARY_GUARDS
-                return True
-            else:
-                return False
-        else:
-            return True
+        if not success: return True
 
-    def _recordReturn(self, guard):
-        self._returnedAt = simtime.now()
+        now = simtime.now()
+        shouldContinue = False
+        interval = self._params.INTERNET_LIKELY_DOWN_INTERVAL * 60
+        if self._lastSuccess and self._lastSuccess + interval < now:
+            self.transitionOnNextCall(self.STATE_PRIMARY_GUARDS)
+            shouldContinue = True
 
+        self._lastSuccess = now
+        return shouldContinue
 
     def nextGuard(self):
         # print("\nSearch next guard with current state %s" % self._state)

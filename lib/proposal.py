@@ -133,9 +133,11 @@ class ChooseGuardAlgorithm(object):
         return g
 
     # How should the transition happen? Immediately or on the next call to NEXT?
+    # We've experienced some problems with too deep recursion when transitioning
+    # immediately
     def transitionTo(self, state):
-        return self.transitionOnNextCall(state)
-        # return self.transitionImmediatelyTo(state)
+        # return self.transitionOnNextCall(state)
+        return self.transitionImmediatelyTo(state)
 
     def transitionOnNextCall(self, state):
         # print("! Transitioned to %s" % state)

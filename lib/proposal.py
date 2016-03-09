@@ -13,61 +13,65 @@ def canRetry(g):
 class StatePrimaryGuards(object):
     def next(self, context):
         # Using tor.entry_is_live(g) rather than wasNotPossibleToConnect()
-        # in markAsUnreachableAndAddToTried() whould remove the need of canRetry(),
-        # and also add the same retry conditions tor currently has.
+        # whould remove the need of canRetry(), and also add the same
+        # progressive retry conditions tor currently has.
         for g in context._primaryGuards:
-            if canRetry(g) or not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
-                context._recordReturn(g)
-                return g
+            if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
+
+            context._recordReturn(g)
+            return g
 
         if context.allHaveBeenTried():
             return context.transitionToPreviousStateOrTryUtopic()
 
-
 class StateTryUtopic(object):
     def next(self, context):
-        # This should add back to REMAINING_UTOPIC_GUARDS but
-        # when are they removed from REMAINING_UTOPIC_GUARDS?
-        context.moveOldTriedGuardsToRemainingList()
-
-        # Try previously used guards. They were PRIMARY_GUARDS at some point.
-        # Why did they leave the PRIMARY_GUARDS list?
-        guards = [g for g in context._usedGuards
-                  if g not in context._primaryGuards]
+        guards = context.usedGuardsNotInPrimary()
+        # I'm unsure if this is intended to force a retry on these guards
+        # regardless of whether they were unreachable before reaching this state
+        # OR if we simply want to expand the primarGuards to include the guards
+        # left behind by the restriction of N_PRIMARY_GUARDS. The former would require:
+        # self.markForRetry(guards)
         for g in guards:
-            if not context.markAsUnreachableAndAddToTried(g, context._triedGuards):
-                context._recordReturn(g)
-                return g
+            if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
 
-        g = context.getFirstByBandwidthAndAddUnreachableTo(context._remainingUtopicGuards,
-                context._triedGuards)
+            context._recordReturn(g)
+            return g
+
+        g = context.getFirstByBandwidthAndRemoveUnreachable(context._remainingUtopicGuards)
         if g:
             context._recordReturn(g)
             return g
 
+        assert(not context._remainingUtopicGuards)
         return context.transitionTo(context.STATE_TRY_DYSTOPIC)
-
 
 class StateTryDystopic(object):
     def next(self, context):
-        context.moveOldTriedDystopicGuardsToRemainingList()
-
-        distopic = [g for g in context._usedGuards if g._node.seemsDystopic()]
-        guards = [g for g in distopic if g not in context._primaryGuards]
-
+        guards = context.dystopicUsedGuardsNotPrimary()
+        # I'm unsure if this is intended to force a retry on these guards
+        # regardless of whether they were unreachable before reaching this state
+        # OR if we simply want to expand the primarGuards to include the guards
+        # left behind by the restriction of N_PRIMARY_GUARDS. The former would require:
+        # self.markForRetry(guards)
         for g in guards:
-            if not context.markAsUnreachableAndAddToTried(g, context._triedDystopicGuards):
-                context._recordReturn(g)
-                return g
+            if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
 
-        g = context.getFirstByBandwidthAndAddUnreachableTo(
-                context._remainingDystopicGuards, context._triedDystopicGuards)
+            context._recordReturn(g)
+            return g
+
+        g = context.getFirstByBandwidthAndRemoveUnreachable(context._remainingDystopicGuards)
         if g:
             context._recordReturn(g)
             return g
 
-        return context.transitionTo(context.STATE_PRIMARY_GUARDS)
+        assert(not context._remainingDystopicGuards)
 
+        # I assume this transition is intended to force a retry on ALL primary
+        # guards regardless of their latest reachability, so I'm marking them
+        # for retry.
+        context.markForRetry(context._primaryGuards)
+        return context.transitionTo(context.STATE_PRIMARY_GUARDS)
 
 class ChooseGuardAlgorithm(object):
     def __repr__(self):
@@ -164,11 +168,16 @@ class ChooseGuardAlgorithm(object):
         print("\nSearch next guard with current state %s" % self._state)
         pgsToRetry = self._primaryGuardsTriedIn(self._params.PRIMARY_GUARDS_RETRY_INTERVAL)
         if pgsToRetry and self._state != self.STATE_PRIMARY_GUARDS:
-            # Mark for retry is the strategy tor currently uses. But comparing
-            # to tor code, this happens when a new guard is successfully
-            # connectected to for the first time.
-            self.markForRetry(pgsToRetry)
+            print("Will retry primary tried more than PRIMARY_GUARDS_RETRY_INTERVAL minutes ago.")
             self._previousState = self._state
+
+            # I assume this transition is intended to force a retry on ALL primary
+            # guards regardless of their latest reachability, so I'm marking them
+            # for retry.
+            # Alternatively, we could only mark the guards that were tried at
+            # least PRIMARY_GUARDS_RETRY_INTERVAL ago with:
+            # self.markForRetry(pgsToRetry)
+            self.markForRetry(self._primaryGuards)
             return self.transitionTo(self.STATE_PRIMARY_GUARDS)
 
         return self._state.next(self)
@@ -183,24 +192,16 @@ class ChooseGuardAlgorithm(object):
         return [g for g in self._primaryGuards
                 if g._lastTried and g._lastTried + seconds < now]
 
+    def getFirstByBandwidthAndRemoveUnreachable(self, remainingSet):
+        remainingList = list(remainingSet) # must be a list to use nextByBandwidth
+        while remainingList:
+            g = self.nextByBandwidth(remainingList)
+            remainingList.remove(g) # remove to ensure we "return each"
 
-    def getFirstByBandwidthAndAddUnreachableTo(self, remaining, tried):
-        guards = list(remaining)  # must be a list to use nextByBandwidth
-        while guards:
-            g = self.nextByBandwidth(guards)
-            guards.remove(g)     # remove to ensure we "return each"
-            if self.markAsUnreachableAndAddToTried(g, tried):
-                remaining.remove(g)
-            else:
+            if not self.wasNotPossibleToConnect(g):
                 return g
 
-    def markAsUnreachableAndAddToTried(self, guard, triedList):
-        if not self.wasNotPossibleToConnect(guard):
-            return None
-
-        # We already use the unreachableSince, so no need to mark as unreachable
-        if not guard in triedList: triedList.append(guard)
-        return guard
+            remainingSet.remove(g) # remove if it was not possible to connect
 
     def wasNotPossibleToConnect(self, guard):
         # Using entry_is_live() would add existing progressive retry window
@@ -211,23 +212,6 @@ class ChooseGuardAlgorithm(object):
     def markAsUnreachable(self, guard):
         if not guard._unreachableSince:
             guard._unreachableSince = simtime.now()
-
-
-    def checkTriedDystopicFailoverAndMarkAllAsUnreachable(self):
-        ok, fromTransition = self.checkFailover(self._triedDystopicGuards,
-                              self._dystopicGuards, self.STATE_RETRY_ONLY)
-        if ok:
-            assert(fromTransition == None)
-            return (True, None)
-
-        # Should this happen BEFORE transitioning in case of a failover failure?
-        # If yes, we can not use checkFailover() the way it is currently written.
-        # An alternative is simply do not use transitionImmediatelyTo().
-        guards = self._primaryGuards + self._triedGuards + self._triedDystopicGuards
-        for g in guards:
-            self.markAsUnreachable(g)
-
-        return (False, fromTransition)
 
     def allHaveBeenTried(self):
         return len([g for g in self._primaryGuards if not g._lastTried]) == 0
@@ -240,20 +224,6 @@ class ChooseGuardAlgorithm(object):
 
     def end(self, guard):
         if guard not in self._usedGuards: self._usedGuards.append(guard)
-
-    def giveOneMoreChanceTo(self, tried, remaining):
-        timeWindow = simtime.now() - self._params.GUARDS_RETRY_TIME * 60
-        guards = [g for g in tried if g._unreachableSince]
-        for g in guards:
-            if g._unreachableSince < timeWindow:
-                g._canRetry = True
-                remaining.add(g)
-
-    def moveOldTriedGuardsToRemainingList(self):
-        self.giveOneMoreChanceTo(self._triedGuards, self._remainingUtopicGuards)
-
-    def moveOldTriedDystopicGuardsToRemainingList(self):
-        self.giveOneMoreChanceTo(self._triedDystopicGuards, self._remainingDystopicGuards)
 
     def filterGuards(self, guards, selectDirGuards, excludeNodes):
         guardsWithoutExluded = [g for g in guards if not g._node in excludeNodes]
@@ -284,3 +254,10 @@ class ChooseGuardAlgorithm(object):
             return self.chooseRandomFrom(remainingUtopic)
 
         return usedGuards.pop(0)
+
+    def usedGuardsNotInPrimary(self):
+        return [g for g in self._usedGuards if g not in self._primaryGuards]
+
+    def dystopicUsedGuardsNotPrimary(self):
+        return [g for g in self.usedGuardsNotInPrimary() if g._node.seemsDystopic()]
+

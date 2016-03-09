@@ -3,18 +3,18 @@
 SCENARIO="$1"
 
 SCRIPT="
-stats '${SCENARIO}_legacy.txt' using 3;
+stats '${SCENARIO}_legacy.txt' using 3 nooutput;
+max_y = STATS_max;
 min_y = STATS_min;
 
-stats '${SCENARIO}_proposal.txt' using 3;
+stats '${SCENARIO}_proposal.txt' using 3 nooutput;
+max_y = max_y > STATS_max ? max_y : STATS_max;
 min_y = min_y < STATS_min ? min_y : STATS_min;
-
-show variable all;
 
 set terminal png size 700,300;
 
 unset xtics;
-set yrange [min_y:100];
+set yrange [min_y:max_y];
 set key off;
 set style fill solid;
 

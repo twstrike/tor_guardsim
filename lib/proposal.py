@@ -90,6 +90,18 @@ class ChooseGuardAlgorithm(object):
         self.STATE_TRY_UTOPIC = StateTryUtopic()
         self.STATE_TRY_DYSTOPIC = StateTryDystopic()
 
+    @property
+    def sampledUtopicGuards(self):
+        allNotBad = [g for g in self._sampledUtopicGuards if not g.isBad()]
+        return allNotBad[:self._SAMPLED_UTOPIC_THRESHOLD]
+
+    @property
+    def sampledDystopicGuards(self):
+        allNotBad = [g for g in self._sampledDystopicGuards if not g.isBad()]
+        return allNotBad[:self._SAMPLED_DYSTOPIC_THRESHOLD]
+
+    def _sampleThreshold(self, fullSet):
+        return int(self._params.SAMPLE_SET_THRESHOLD * len(fullSet))
 
     def start(self, usedGuards, sampledUtopicGuards, sampledDystopicGuards,
               excludeNodes, nPrimaryGuards, guardsInConsensus,
@@ -116,7 +128,7 @@ class ChooseGuardAlgorithm(object):
         self._remainingDystopicGuards = set(self._sampledDystopicGuards) - usedGuardsSet
 
         self._state = self.STATE_PRIMARY_GUARDS
-        self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
+        self._findPrimaryGuards(self._usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
 
     def _chooseRandomFrom(self, guards):
         if self._params.PRIORITIZE_BANDWIDTH:
@@ -243,10 +255,12 @@ class ChooseGuardAlgorithm(object):
             if not g.isBad():
                 self._primaryGuards.append(g)
 
+    # Ensure sampledSet has has SAMPLE_SET_THRESHOLD not bad elements from fullSet
+    # adding elements if neeeded
     def _fillInSample(self, sampledSet, fullSet):
-        threshold = self._params.SAMPLE_SET_THRESHOLD * len(fullSet)
+        threshold = self._sampleThreshold(fullSet)
         fullSetCopy = list(fullSet) # must be a copy, because it is changed by nextByBandwidth
-        while len(sampledSet) < threshold:
+        while len([g for g in sampledSet if not g.isBad()]) < threshold:
             g = self._nextByBandwidth(fullSetCopy)
             assert(g)
             sampledSet.append(g)

@@ -173,21 +173,22 @@ class Client(object):
         # At bootstrap, we get a new consensus
         self.updateGuardLists()
 
+    def _getGuardsInCurrentConsensus(self):
+        Guard.markAllUnlisted()
+        guards = []
+        for n in list(self._net.new_consensus()):
+            guard = Guard.get(n)
+            guard.markListed()
+            guards.append(guard)
+
+        return guards
+
     def updateGuardLists(self):
         """Called at start and when a new consensus should be made & received:
            updates *TOPIC_GUARDS."""
 
-        Guard.markAllUnlisted()
-
-        # We received a new consensus now, and use THIS until we receive a new
-        # consensus
-        self._ALL_GUARDS = []
-        for n in list(self._net.new_consensus()):
-            guard = Guard.get(n)
-            guard.markListed()
-            self._ALL_GUARDS.append(guard)
-
-        # Filter dystopics
+        # This is our view of the consensus
+        self._ALL_GUARDS = self._getGuardsInCurrentConsensus()
         self._ALL_DYSTOPIC = [dg for dg in self._ALL_GUARDS if dg.node.seemsDystopic()]
 
     def markGuard(self, guard, up):

@@ -244,8 +244,12 @@ class ChooseGuardAlgorithm(object):
         used = list(usedGuards)
         while len(self._primaryGuards) < nPrimaryGuards:
             g = self._nextPrimaryGuard(used, remainingUtopic)
+            if not g: break # ran out of used and remainingUtopic
+
             # XXX Add to spec: PRIMARY_GUARDS is a list of unique elements
-            if g and (not g.isBad()) and g not in self._primaryGuards:
+            if g in self._primaryGuards: continue
+
+            if not g.isBad():
                 self._primaryGuards.append(g)
 
     def _fillInSample(self, sampledSet, fullSet):
@@ -258,9 +262,12 @@ class ChooseGuardAlgorithm(object):
 
     def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
         if not usedGuards:
+            if not remainingUtopic: return None
+
             g = self._nextByBandwidth(list(remainingUtopic))
             # Assume we should remove a chosen guard from REMAINING_UTOPIC
             # The spec is not explicit about it, though
+            # XXX compare implication of this
             assert(g)
             remainingUtopic.remove(g)
             return g

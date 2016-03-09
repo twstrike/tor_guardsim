@@ -77,7 +77,7 @@ class ChooseGuardAlgorithm(object):
     def __repr__(self):
         vals = vars(self)
         filtered = {k: vals[k] for k in [
-            "_state", "_previousState", "_primaryGuards", "_triedGuards"]
+            "_state", "_previousState", "_primaryGuards" ]
                     }
         return pprint.pformat(filtered, indent=4, width=1)
 
@@ -85,9 +85,11 @@ class ChooseGuardAlgorithm(object):
     def __init__(self, params):
         self._params = params
 
+        self._usedGuards = None
+        self._sampledUtopicGuards = None
+        self._sampledDystopicGuards = None
+
         self._primaryGuards = []
-        self._guardsInConsensus = []
-        self._dystopicGuardsInConsensus = []
         
         self._returnedAt = 0
 
@@ -101,35 +103,43 @@ class ChooseGuardAlgorithm(object):
     def start(self, usedGuards, sampledUtopicGuards, sampledDystopicGuards,
               excludeNodes, nPrimaryGuards, guardsInConsensus,
               dystopicGuardsInConsensus, selectDirGuards=False):
+
+        # They are references and will be changed by the algorithm if needed
         self._usedGuards = usedGuards
+        self._sampledUtopicGuards = sampledUtopicGuards
+        self._sampledDystopicGuards = sampledDystopicGuards
 
-        excludeNodesSet = set(excludeNodes)
-        self._guardsInConsensus = list(guardsInConsensus)
-        self._dystopicGuardsInConsensus = list(dystopicGuardsInConsensus)
+        utopicGuards = self._filterGuards(
+                guardsInConsensus, selectDirGuards, excludeNodes)
+        dystopicGuards = self._filterGuards(
+                dystopicGuardsInConsensus, selectDirGuards, excludeNodes)
 
-        self._guards = self._getGuards(selectDirGuards, excludeNodesSet)
-        self._utopicGuards = self._guards
-
-        self._dystopicGuards = self._filterDystopicGuards(selectDirGuards, excludeNodesSet)
+        # Fill in samples
+        self._fillInSample(self._sampledUtopicGuards, utopicGuards)
+        self._fillInSample(self._sampledDystopicGuards, dystopicGuards)
 
         usedGuardsSet = set(usedGuards)
-        self._remainingUtopicGuards = self._utopicGuards - usedGuardsSet
-        self._remainingDystopicGuards = self._dystopicGuards - usedGuardsSet
-        self._triedGuards, self._triedDystopicGuards = [], []
+        # XXX they should be refilled
+        # the spec mentions they should be refilled, but I'm not sure when
+        self._remainingUtopicGuards = set(self._sampledUtopicGuards) - usedGuardsSet
+        self._remainingDystopicGuards = set(self._sampledDystopicGuards) - usedGuardsSet
+
         self._state = self.STATE_PRIMARY_GUARDS
         self._findPrimaryGuards(usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
 
-    def chooseRandomFrom(self, guards):
+    def _chooseRandomFrom(self, guards):
         if self._params.PRIORITIZE_BANDWIDTH:
             return tor.choose_node_by_bandwidth_weights(guards)
 
         return random.choice(guards)
 
-    def nextByBandwidth(self, guards):
-        # Should a guard be removed from REMAINING_*_GUARDS when it is chosen
-        # by nextByBandwidth? Where do we enforce PRIMARY_GUARDS wont contain
-        # duplicate guards?
-        return self.chooseRandomFrom(guards)
+    def _nextByBandwidth(self, guards):
+        # Assume subsequent calls to _nextByBandwidth should not return previously
+        # returned guards, so we remove them once they are chosen
+        # This is not explicit in the spec, though
+        g = self._chooseRandomFrom(guards)
+        if g: guards.remove(g)
+        return g
 
     # How should the transition happen? Immediately or on the next call to NEXT?
     def transitionTo(self, state):
@@ -193,11 +203,11 @@ class ChooseGuardAlgorithm(object):
                 if g._lastTried and g._lastTried + seconds < now]
 
     def getFirstByBandwidthAndRemoveUnreachable(self, remainingSet):
-        remainingList = list(remainingSet) # must be a list to use nextByBandwidth
+        # must be a list to use nextByBandwidth, and must be a copy
+        remainingList = list(remainingSet)
         while remainingList:
-            g = self.nextByBandwidth(remainingList)
-            remainingList.remove(g) # remove to ensure we "return each"
-
+            g = self._nextByBandwidth(remainingList)
+            assert(g)
             if not self.wasNotPossibleToConnect(g):
                 return g
 
@@ -225,34 +235,38 @@ class ChooseGuardAlgorithm(object):
     def end(self, guard):
         if guard not in self._usedGuards: self._usedGuards.append(guard)
 
-    def filterGuards(self, guards, selectDirGuards, excludeNodes):
+    def _filterGuards(self, guards, selectDirGuards, excludeNodes):
         guardsWithoutExluded = [g for g in guards if not g._node in excludeNodes]
-        guards = [g for g in liveGuards if g_isDirectoryCache] if selectDirGuards else guardsWithoutExluded
+        guards = [g for g in guardsWithoutExluded if g._isDirectoryCache] if selectDirGuards else guardsWithoutExluded
         return set(guards)
 
-    def _getGuards(self, selectDirGuards, excludeNodesSet):
-        return self.filterGuards(self._guardsInConsensus, selectDirGuards, excludeNodesSet)
-
-    def _filterDystopicGuards(self, selectDirGuards, excludeNodesSet):
-        return self.filterGuards(self._dystopicGuardsInConsensus, selectDirGuards, excludeNodesSet)
-
     def _findPrimaryGuards(self, usedGuards, remainingUtopic, nPrimaryGuards):
-        # This is not taking into account the remaining dystopic guards. Is that okay?
         used = list(usedGuards)
-        remaining = list(remainingUtopic)
         while len(self._primaryGuards) < nPrimaryGuards:
-            g = self._nextPrimaryGuard(used, remaining)
+            g = self._nextPrimaryGuard(used, remainingUtopic)
             # XXX Add to spec: PRIMARY_GUARDS is a list of unique elements
             if g and (not g.isBad()) and g not in self._primaryGuards:
                 self._primaryGuards.append(g)
 
-    def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
-        # If USED_GUARDS is empty, use NEXT_BY_BANDWIDTH with REMAINING_UTOPIC_GUARDS.
-        # REMAINING_UTOPIC_GUARDS is by definition not bad (they come from the
-        # latest consensus).
-        if not usedGuards:
-            return self.chooseRandomFrom(remainingUtopic)
+    def _fillInSample(self, sampledSet, fullSet):
+        threshold = self._params.SAMPLE_SET_THRESHOLD * len(fullSet)
+        fullSetCopy = list(fullSet) # must be a copy, because it is changed by nextByBandwidth
+        while len(sampledSet) < threshold:
+            g = self._nextByBandwidth(fullSetCopy)
+            assert(g)
+            sampledSet.append(g)
 
+    def _nextPrimaryGuard(self, usedGuards, remainingUtopic):
+        if not usedGuards:
+            g = self._nextByBandwidth(list(remainingUtopic))
+            # Assume we should remove a chosen guard from REMAINING_UTOPIC
+            # The spec is not explicit about it, though
+            assert(g)
+            remainingUtopic.remove(g)
+            return g
+
+        # Dont worry about removing, because this is a copy of the original -
+        # and this prevents returning always the same
         return usedGuards.pop(0)
 
     def usedGuardsNotInPrimary(self):

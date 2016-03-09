@@ -24,36 +24,25 @@ class ClientParams(object):
     """
 
     def __init__(self,
-                 TOO_RECENTLY=86400,
-                 RETRY_DELAY=30,
-                 RETRY_MULT=2,
                  PRIORITIZE_BANDWIDTH=True,
                  INTERNET_LIKELY_DOWN_INTERVAL=5,
                  DISJOINT_SETS=False):
-        # From asn's post and prop259.  This should be a consensus parameter.
-        # It stores the number of guards in {U,DYS}TOPIC_GUARDLIST which we
-        # (strongly) prefer connecting to above all others.  The ones which we
-        # prefer connecting to are those at the top of the
-        # {U,DYS}TOPIC_GUARDLIST when said guardlist is ordered in terms of the
-        # nodes' measured bandwidth as listed in the most recent consensus.
-        self.N_PRIMARY_GUARDS = 3
 
-        self.GUARDS_RETRY_TIME = 20
+        # The number of guards we should consider our primary guards.
+        self.N_PRIMARY_GUARDS = 3
 
         # Time (in minutes) since we tried any of the primary guards
         self.PRIMARY_GUARDS_RETRY_INTERVAL = 3
 
-        # Time (in minutes)
-        self.GUARDS_TRY_THRESHOLD_TIME = 120
+        # Fraction of the total utopic and dystopic guards we should sample as
+        # candidates
+        self.SAMPLE_SET_THRESHOLD = 0.02
 
-        # Percentage of total guards in the latest consensus we want to try in GUARDS_TRY_THRESHOLD_TIME minutes
-        self.GUARDS_TRY_THRESHOLD = 0.03
-
-        self.GUARDS_FAILOVER_THRESHOLD = 0.02
+        # After this ammount of minutes we retry primary guards when we find
+        # a functioning guard
+        self.INTERNET_LIKELY_DOWN_INTERVAL = INTERNET_LIKELY_DOWN_INTERVAL
 
         self.PRIORITIZE_BANDWIDTH = PRIORITIZE_BANDWIDTH
-
-        self.INTERNET_LIKELY_DOWN_INTERVAL = INTERNET_LIKELY_DOWN_INTERVAL
 
 class Stats(object):
     """Contains information about the stats of several runs over potentially
@@ -163,8 +152,10 @@ class Client(object):
 
         self._stats = stats
 
-        #  used guards
-        self._usedGuards = []
+        self._USED_GUARDS = []
+        self._SAMPLED_UTOPIC_GUARDS = []
+        self._SAMPLED_DYSTOPIC_GUARDS = []
+        self._EXCLUDE_NODES = []
 
         # All guards in the latest consensus
         self._ALL_GUARDS = []
@@ -230,9 +221,10 @@ class Client(object):
         """Try to build a circuit until we succeeded, or timeout."""
         gs = proposal.ChooseGuardAlgorithm(self._p)
 
-        gs.start(self._usedGuards, [], [], [], self._p.N_PRIMARY_GUARDS,
-                 self._ALL_GUARDS, self._ALL_DYSTOPIC)
-
+        gs.start(self._USED_GUARDS,
+            self._SAMPLED_UTOPIC_GUARDS, self._SAMPLED_DYSTOPIC_GUARDS,
+            self._EXCLUDE_NODES, self._p.N_PRIMARY_GUARDS,
+            self._ALL_GUARDS, self._ALL_DYSTOPIC)
 
         tried = 0
         while tried < self._BUILD_CIRCUIT_TIMEOUT:

@@ -20,5 +20,12 @@ set -xe
 # switch between networks
 ./compare-scenario --switching-network
 
+# slow recovery
+./compare-scenario --slow-recovery
+
 # network down
 ./compare-scenario --network-down --total-duration 1
+
+# traveling network
+--travelling-network -T 1
+

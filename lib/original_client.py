@@ -1,3 +1,5 @@
+# -*- coding: utf-8; -*-
+
 from __future__ import print_function
 
 import tor
@@ -118,7 +120,6 @@ class Client(object):
         # Dont add what it already in the list.
         if g in self._GUARD_LIST: return None
 
-        print("Adding %s to GUARD_LIST" % g)
         self._GUARD_LIST.append(g)
 
         now = simtime.now()
@@ -137,9 +138,12 @@ class Client(object):
         # if g._isBusy: return None
         return g
 
+    # This is the slowest function in this simulation
     def chooseGoodEntryServer(self):
         allButCurrent = [guard for guard in self._ALL_GUARDS if guard not in self._GUARD_LIST]
+        # This is VERY SLOW
         guard = tor.choose_node_by_bandwidth_weights(allButCurrent)
+        # guard = random.choice(allButCurrent)
         return guard
 
     def populateLiveEntryGuards(self, forDirectory):
@@ -259,7 +263,7 @@ class Client(object):
                 return self.markAllBeforeThisForRetry(guard)
         else:
             if not guard._madeContact:
-                print("Remove guard we never made contact with %s" % guard)
+                # print("Remove guard we never made contact with %s" % guard)
                 self._GUARD_LIST = [g for g in self._GUARD_LIST if g != guard]
             elif not guard._unreachableSince:
                 guard._unreachableSince = now
@@ -276,7 +280,7 @@ class Client(object):
 
     # Returns True iff previous guards will be retried later
     def markAllBeforeThisForRetry(self, guard):
-        print("Mark all before %s for RETRY" % guard)
+        # print("Mark all before %s for RETRY" % guard)
 
         refuseConnection = False
         for g in self._GUARD_LIST:

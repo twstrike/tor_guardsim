@@ -11,10 +11,13 @@ stats '${SCENARIO}_proposal.txt' using 3 nooutput;
 max_y = max_y > STATS_max ? max_y : STATS_max;
 min_y = min_y < STATS_min ? min_y : STATS_min;
 
+min_range = max_y == min_y ? min_y-1 : min_y;
+max_range = max_y == min_y ? max_y+1 : max_y;
+
 set terminal png size 700,300;
 
 unset xtics;
-set yrange [min_y:max_y];
+set yrange [min_range:max_range];
 set key off;
 set style fill solid;
 

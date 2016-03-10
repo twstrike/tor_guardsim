@@ -56,6 +56,10 @@ def makeOptionsParser():
         "-w", "--slow-recovery", action="store_true",
         help=("Simulate a very slow network where nodes take an hour to recover."))
 
+    net_group.add_argument(
+        "-t", "--travelling-network", action="store_true",
+        help=("Simulate a person traveling between places with and without network."))
+
     # Other miscellaneous options
     parser.add_argument(
         "-T", "--total-duration", type=int,

@@ -35,6 +35,8 @@ def trivialSimulation(args):
         net = tornet.SwitchingNetwork(net)
     if args.slow_recovery:
         net = tornet.SlowRecoveryNetwork(net)
+    if args.travelling_network:
+        net = tornet.TravelingNetwork(net)
 
     params = client.ClientParams(
         PRIORITIZE_BANDWIDTH=not args.no_prioritize_bandwidth,
@@ -55,7 +57,7 @@ def trivialSimulation(args):
 
     for period in xrange(totalDuration):  # one hour each
         for subperiod in xrange(30):  # two minutes each
-            if (subperiod % 10) == 0:
+            if (subperiod % 10) == 0: # each 20 minutes
                 # nodes left and arrived
                 net.do_churn()
             # nodes went up and down

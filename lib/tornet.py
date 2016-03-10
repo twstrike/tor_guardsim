@@ -333,18 +333,25 @@ class SlowRecoveryNetwork(_NetworkDecorator):
            up."""
         self._network.updateRunning(recoveryTime=3600)
 
+ALL_NETWORKS = [
+    FascistNetwork,
+    EvilFilteringNetwork,
+    SniperNetwork,
+    FlakyNetwork,
+    DownNetwork,
+    SlowRecoveryNetwork
+]
 
 class SwitchingNetwork(_NetworkDecorator):
     """A network where the network randomly switches between all kinds noted above."""
 
-    def __init__(self, network):
-        super(SwitchingNetwork, self).__init__(network)
-        self._real_network = network
+    def __init__(self, decorated, networks=ALL_NETWORKS):
+        super(SwitchingNetwork, self).__init__(decorated)
+        self._real_network = decorated
+        self._networks = networks
 
     def _switch_networks(self):
-        allNetworks = [FascistNetwork, EvilFilteringNetwork, SniperNetwork, FlakyNetwork, DownNetwork,
-                       self._real_network, SlowRecoveryNetwork]
-        newNet = random.choice(allNetworks)
+        newNet = random.choice(self._networks + [self._real_network])
         if newNet == self._real_network:
             print("Network switched to real network")
             self._network = self._real_network
@@ -355,3 +362,25 @@ class SwitchingNetwork(_NetworkDecorator):
     def do_churn(self):
         self._switch_networks()
         self._network.do_churn()
+
+class TravelingNetwork(_NetworkDecorator):
+    """A network that periodically goes down."""
+
+    def __init__(self, decorated, period=600):
+        super(TravelingNetwork, self).__init__(decorated)
+        self._downNetwork = DownNetwork(decorated)
+        self._decorated = decorated
+        self._period = period
+
+    def _switch_networks(self):
+        if (simtime.now() / self._period) % 2 == 0:
+            print("Network switched to real network at %s" % simtime.now())
+            self._network = self._decorated
+        else:
+            print("Network switched to DownNetwork at %s" % simtime.now())
+            self._network = self._downNetwork
+        
+    def probe_node_is_up(self, node):
+        self._switch_networks()
+        return self._network.probe_node_is_up(node)
+

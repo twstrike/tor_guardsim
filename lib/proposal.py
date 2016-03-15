@@ -12,7 +12,7 @@ def canRetry(g):
 class StatePrimaryGuards(object):
     def next(self, context):
         # Using tor.entry_is_live(g) rather than wasNotPossibleToConnect()
-        # whould remove the need of canRetry(), and also add the same
+        # would remove the need of canRetry(), and also add the same
         # progressive retry conditions tor currently has.
         for g in context._primaryGuards:
             if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
@@ -26,7 +26,7 @@ class StateTryUtopic(object):
         guards = context.usedGuardsNotInPrimary()
         # I'm unsure if this is intended to force a retry on these guards
         # regardless of whether they were unreachable before reaching this state
-        # OR if we simply want to expand the primarGuards to include the guards
+        # OR if we simply want to expand the primaryGuards to include the guards
         # left behind by the restriction of N_PRIMARY_GUARDS. The former would require:
         # self.markForRetry(guards)
         for g in guards:
@@ -45,7 +45,7 @@ class StateTryDystopic(object):
         guards = context.dystopicUsedGuardsNotPrimary()
         # I'm unsure if this is intended to force a retry on these guards
         # regardless of whether they were unreachable before reaching this state
-        # OR if we simply want to expand the primarGuards to include the guards
+        # OR if we simply want to expand the primaryGuards to include the guards
         # left behind by the restriction of N_PRIMARY_GUARDS. The former would require:
         # self.markForRetry(guards)
         for g in guards:
@@ -90,13 +90,13 @@ class ChooseGuardAlgorithm(object):
         self.STATE_TRY_DYSTOPIC = StateTryDystopic()
 
     def onNewConsensus(self, utopicGuards, dystopicGuards):
-        # Here we ensure all guard profiles wont have bad guards, and
+        # Here we ensure all guard profiles won't have bad guards, and
         # when the bad guards are not bad anymore we ensure they will be back
         # to each profile in the same position.
 
         # We dont need to care about USED_GUARDS
         # Because it is only used to filter out guards from SAMPLED_* and these
-        # sets should not have bad gaurds.
+        # sets should not have bad guards.
 
         self._SAMPLED_UTOPIC_THRESHOLD = self._sampleThreshold(utopicGuards)
         self._SAMPLED_DYSTOPIC_THRESHOLD = self._sampleThreshold(dystopicGuards)
@@ -273,7 +273,7 @@ class ChooseGuardAlgorithm(object):
                 self._primaryGuards.append(g)
 
     # Ensure sampledSet has has SAMPLE_SET_THRESHOLD not bad elements from fullSet
-    # adding elements if neeeded
+    # adding elements if needed
     def _fillInSample(self, sampledSet, fullSet):
         threshold = self._sampleThreshold(fullSet)
         fullSetCopy = list(fullSet) # must be a copy, because it is changed by nextByBandwidth

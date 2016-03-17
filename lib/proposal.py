@@ -42,16 +42,6 @@ class StateTryUtopic(object):
 
 class StateTryDystopic(object):
     def next(self, context):
-        guards = context.dystopicUsedGuardsNotPrimary()
-        # I'm unsure if this is intended to force a retry on these guards
-        # regardless of whether they were unreachable before reaching this state
-        # OR if we simply want to expand the primaryGuards to include the guards
-        # left behind by the restriction of N_PRIMARY_GUARDS. The former would require:
-        # self.markForRetry(guards)
-        for g in guards:
-            if not canRetry(g) and context.wasNotPossibleToConnect(g): continue
-            return g
-
         g = context.getFirstByBandwidthAndRemoveUnreachable(context._remainingDystopicGuards)
         if g:
             return g
@@ -250,6 +240,7 @@ class ChooseGuardAlgorithm(object):
         if self._previousState:
             return self.transitionTo(self._previousState)
         else:
+            self.markForRetry(self.usedGuardsNotInPrimary())
             return self.transitionTo(self.STATE_TRY_UTOPIC)
 
     def end(self, guard):
@@ -301,5 +292,3 @@ class ChooseGuardAlgorithm(object):
     def usedGuardsNotInPrimary(self):
         return [g for g in self._usedGuards if g not in self._primaryGuards]
 
-    def dystopicUsedGuardsNotPrimary(self):
-        return [g for g in self.usedGuardsNotInPrimary() if g._node.seemsDystopic()]

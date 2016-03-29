@@ -229,21 +229,28 @@ class Client(object):
 
     def buildCircuit(self):
         """Try to build a circuit until we succeeded, or timeout."""
-	self._GUARD_SELECTION = proposal.ChooseGuardAlgorithm(self._p)
-
-        self._GUARD_SELECTION.start(self._USED_GUARDS,
-            self._SAMPLED_UTOPIC_GUARDS, self._SAMPLED_DYSTOPIC_GUARDS,
-            self._EXCLUDE_NODES, self._p.N_PRIMARY_GUARDS,
-            self._ALL_GUARDS, self._ALL_DYSTOPIC)
-
         tried = 0
         while tried < self._BUILD_CIRCUIT_TIMEOUT:
+            self._GUARD_SELECTION = proposal.ChooseGuardAlgorithm(self._p)
+            self._GUARD_SELECTION.start(self._USED_GUARDS,
+                self._SAMPLED_UTOPIC_GUARDS, self._SAMPLED_DYSTOPIC_GUARDS,
+                self._EXCLUDE_NODES, self._p.N_PRIMARY_GUARDS,
+                self._ALL_GUARDS, self._ALL_DYSTOPIC)
+
             guard = self._GUARD_SELECTION.nextGuard()
             if not guard: continue # state transition
+
+            self._GUARD_SELECTION.end(guard)
             circuit = self.composeCircuitAndConnect(guard)
-            if not self._GUARD_SELECTION.shouldContinue(circuit != None):
-                self._GUARD_SELECTION.end(guard)
+
+            succeeded = circuit != None
+            if succeeded:
                 self._stats.failuresUntilSuccess(tried)
+
+            # shouldContinue does not depend on the algorithm state, and can
+            # safely run without a "context", so it should be safe to run it
+            # after we END() and free the context
+            if not self._GUARD_SELECTION.shouldContinue(succeeded):
                 return circuit
 
             tried += 1

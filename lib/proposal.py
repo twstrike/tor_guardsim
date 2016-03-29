@@ -116,7 +116,7 @@ class ChooseGuardAlgorithm(object):
               dystopicGuardsInConsensus, selectDirGuards=False):
 
         # They are references and will be changed by the algorithm if needed
-        self._usedGuards = usedGuards
+        self._usedGuards = [g for g in usedGuards if g._madeContact]
         self._sampledUtopicGuards = sampledUtopicGuards
         self._sampledDystopicGuards = sampledDystopicGuards
 

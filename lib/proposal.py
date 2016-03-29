@@ -182,6 +182,7 @@ class ChooseGuardAlgorithm(object):
         shouldContinue = False
         interval = self._params.INTERNET_LIKELY_DOWN_INTERVAL * 60
         if self._lastSuccess and self._lastSuccess + interval < now:
+            self.markForRetry(self._primaryGuards)
             self.transitionOnNextCall(self.STATE_PRIMARY_GUARDS)
             shouldContinue = True
 

@@ -131,7 +131,7 @@ class Stats(object):
         exposure = 0
         for t in ticks:
             exposure = self._EXPOSURE_AT[t]
-            if t >= time: break
+            if t > time: break
 
         return exposure
 

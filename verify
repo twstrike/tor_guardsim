@@ -27,5 +27,5 @@ set -xe
 ./compare-scenario --network-down --total-duration 1
 
 # traveling network
---travelling-network -T 1
+./compare-scenario --travelling-network -T 1
 

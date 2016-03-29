@@ -232,7 +232,7 @@ class Network(object):
         if up:
             simtime.advanceTime(2)
         else:
-            simtime.advanceTime(4)
+            simtime.advanceTime(10) # as per mailing list discussion
 
         return up
 

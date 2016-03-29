@@ -11,4 +11,5 @@ FILENAME="scenario${OPS}"
 
 ./plot-success ./out/${FILENAME} > ./out/success_${OPS}.png
 ./plot-exposure ./out/${FILENAME} > ./out/exposure_${OPS}.png
+./plot-time-to-success ./out/${FILENAME} > ./out/time-to-success_${OPS}.png
 

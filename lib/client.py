@@ -57,6 +57,7 @@ class Stats(object):
 
         self._GUARDS_UNTIL_FIRST_SUCCESS = None
         self._FAILURES_UNTIL_FIRST_SUCCESS = None
+        self._TIME_UNTIL_FIRST_SUCCESS = None
 
         self._EXPOSED_TO_GUARDS = []
         self._EXPOSURE_AT = {}
@@ -89,6 +90,12 @@ class Stats(object):
 
         return self._FAILURES_UNTIL_FIRST_SUCCESS
 
+    def timeUntilFirstSuccess(self):
+        if not self._TIME_UNTIL_FIRST_SUCCESS:
+            return simtime.now()
+
+        return self._TIME_UNTIL_FIRST_SUCCESS
+
     def exposureUntilFirstSuccess(self):
         if not self._GUARDS_UNTIL_FIRST_SUCCESS:
             return self.guardsExposureAfter(simtime.now())
@@ -102,6 +109,9 @@ class Stats(object):
     def failuresUntilSuccess(self, num):
         self._CIRCUIT_FAILURES += num
         self._CIRCUIT_SUCCESSES += 1
+        
+        if not self._TIME_UNTIL_FIRST_SUCCESS:
+            self._TIME_UNTIL_FIRST_SUCCESS = simtime.now()
 
         if not self._GUARDS_UNTIL_FIRST_SUCCESS:
             self._GUARDS_UNTIL_FIRST_SUCCESS = self.guardsExposureAfter(simtime.now())

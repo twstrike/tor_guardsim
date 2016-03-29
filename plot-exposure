@@ -28,10 +28,10 @@ set boxwidth 1 relative;
 set multiplot layout 1,2 columnsfirst title \"{/:Bold=15 Exposure Rate (1, 15 and 30 hrs)}\";
 
 set title \"Original Algorithm\";
-plot for[COL=8:10] '${SCENARIO}_legacy.txt' using COL title columnheader;
+plot for[COL=9:11] '${SCENARIO}_legacy.txt' using COL title columnheader;
 
 set title \"Proposal\";
-plot for[COL=8:10] '${SCENARIO}_proposal.txt' using COL title columnheader;
+plot for[COL=9:11] '${SCENARIO}_proposal.txt' using COL title columnheader;
 
 unset multiplot;
 "

@@ -91,6 +91,7 @@ def trivialSimulation(args):
 
     print("Number of guards we tried before succeeding first circuit:   %d" % stats.exposureUntilFirstSuccess())
     print("Failures until the first circuit is built:   %d" % stats.failuresUntilFirstSuccess())
+    print("Time until first success: %d" % stats.timeUntilFirstSuccess())
     print("Total simulation time:    %d" % simtime.now())
 
 

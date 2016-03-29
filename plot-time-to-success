@@ -3,11 +3,11 @@
 SCENARIO="$1"
 
 SCRIPT="
-stats '${SCENARIO}_legacy.txt' using 4 nooutput;
+stats '${SCENARIO}_legacy.txt' using 14 nooutput;
 max_y = STATS_max;
 min_y = STATS_min;
 
-stats '${SCENARIO}_proposal.txt' using 4 nooutput;
+stats '${SCENARIO}_proposal.txt' using 14 nooutput;
 max_y = max_y > STATS_max ? max_y : STATS_max;
 min_y = min_y < STATS_min ? min_y : STATS_min;
 
@@ -17,17 +17,17 @@ max_range = max_y == min_y ? max_y+1 : max_y;
 set terminal png size 700,300;
 
 unset xtics;
-set yrange [min_range:max_range];
+set yrange [0:max_range];
 set key off;
 set style fill solid;
 
-set multiplot layout 1,2 columnsfirst title \"{/:Bold=15 Success rate (%)}\";
+set multiplot layout 1,2 columnsfirst title \"{/:Bold=15 Time to first success}\";
 
 set title \"Original Algorithm\";
-plot '${SCENARIO}_legacy.txt' using 4 with boxes;
+plot '${SCENARIO}_legacy.txt' using 14 with boxes;
 
 set title \"Proposal\";
-plot '${SCENARIO}_proposal.txt' using 4 with boxes;
+plot '${SCENARIO}_proposal.txt' using 14 with boxes;
 
 unset multiplot;
 "

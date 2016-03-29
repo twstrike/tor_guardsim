@@ -108,6 +108,10 @@ class ChooseGuardAlgorithm(object):
         allNotBad = [g for g in self._sampledDystopicGuards if not g.isBad()]
         return allNotBad[:self._SAMPLED_DYSTOPIC_THRESHOLD]
 
+    @property
+    def usedGuards(self):
+        return [g for g in self._usedGuards if g._madeContact]
+
     def _sampleThreshold(self, fullSet):
         return int(self._params.SAMPLE_SET_THRESHOLD * len(fullSet))
 
@@ -116,7 +120,7 @@ class ChooseGuardAlgorithm(object):
               dystopicGuardsInConsensus, selectDirGuards=False):
 
         # They are references and will be changed by the algorithm if needed
-        self._usedGuards = [g for g in usedGuards if g._madeContact]
+        self._usedGuards = usedGuards
         self._sampledUtopicGuards = sampledUtopicGuards
         self._sampledDystopicGuards = sampledDystopicGuards
 
@@ -128,14 +132,14 @@ class ChooseGuardAlgorithm(object):
         # Fill in samples
         self.onNewConsensus(utopicGuards, dystopicGuards)
 
-        usedGuardsSet = set(self._usedGuards)
+        usedGuardsSet = set(self.usedGuards)
         # XXX they should be refilled
         # the spec mentions they should be refilled, but I'm not sure when
         self._remainingUtopicGuards = set(self._sampledUtopicGuards) - usedGuardsSet
         self._remainingDystopicGuards = set(self._sampledDystopicGuards) - usedGuardsSet
 
         self._state = self.STATE_PRIMARY_GUARDS
-        self._findPrimaryGuards(self._usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
+        self._findPrimaryGuards(self.usedGuards, self._remainingUtopicGuards, nPrimaryGuards)
 
     def _chooseRandomFrom(self, guards):
         if self._params.PRIORITIZE_BANDWIDTH:
@@ -290,5 +294,5 @@ class ChooseGuardAlgorithm(object):
         return usedGuards.pop(0)
 
     def usedGuardsNotInPrimary(self):
-        return [g for g in self._usedGuards if g not in self._primaryGuards]
+        return [g for g in self.usedGuards if g not in self._primaryGuards]
 
